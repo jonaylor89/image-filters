@@ -1,2 +1,2 @@
 
-# CMSC 636 Image Analysis Project
+# CMSC 630 Image Analysis Project

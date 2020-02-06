@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-import glob
 import numpy as np
 
 from PIL import Image
@@ -10,7 +9,7 @@ from pathlib import Path
 from typing import List
 
 
-def get_image_data(filename: str) -> np.array:
+def get_image_data(filename: Path) -> np.array:
     with Image.open(filename) as img:
         print("[INFO] extracting data from:", filename)
         return np.array(img)

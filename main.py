@@ -1,83 +1,30 @@
 #!/usr/bin/env python3
 
-"""
-
-- Read in images from directory into a queue
-- Serially process images
-    - Convert to numpy array
-    - Apply filters
-        - Salt and pepper
-        - Gaussian noise
-        - Convert to gray scale
-    - Output histograms
-    - Display performance
-- Display performance for batch
-
-#from __future__ import print_function, division, absolute_import
+import sys
+import glob
 import numpy as np
-import numba
-#from numba.utils import IS_PY3
-from numba.decorators import jit
-from numba import double
-#from numba import double, jit
 
-nd4type = numba.double[:,:,:,:]
-nd3type = numba.double[:,:,:]
+from PIL import Image
+from pathlib import Path
 
-@jit(nopython=True)
-def nb_get_data(N=N, n_N=n_N, M=M, n_M=n_M, seed=42, prefetching=False):
-    np.random.seed(seed)
-    if prefetching:
-        A = np.random.rand(n_N, N, N)
-        B = np.random.rand(n_M, M, M)
-        C = np.zeros((n_N, n_M, N, N))
-    else:
-        A = np.random.rand(N, N, n_N)
-        B = np.random.rand(M, M, n_M)
-        C = np.zeros((N, N, n_N, n_M))
-    return A, B, C
+from typing import List
 
-@jit((nd3type, nd3type, nd4type))
-def nbcorr_prefetching(imgs, filters, output):
-    n_imgs, n_rows, n_cols = imgs.shape
-    n_filters, height, width = filters.shape
 
-    for ii in range(n_imgs):
-        for rr in range(n_rows - height + 1):
-            for cc in range(n_cols - width + 1):
-                for hh in range(height):
-                    for ww in range(width):
-                        for ff in range(n_filters):
-                            imgval = imgs[ii, rr + hh, cc + ww]
-                            filterval = filters[ff, hh, ww]
-                            output[ii, ff, rr, cc] += imgval * filterval
+def get_image_data(filename: str) -> np.array:
+    with Image.open(filename) as img:
+        print("[INFO] extracting data from:", filename)
+        return np.array(img)
 
-@jit((nd3type, nd3type, nd4type))
-def nbcorr(imgs, filters, output):
-    n_rows, n_cols, n_imgs = imgs.shape
-    height, width, n_filters = filters.shape
 
-    for ii in range(n_imgs):
-        for rr in range(n_rows - height + 1):
-            for cc in range(n_cols - width + 1):
-                for hh in range(height):
-                    for ww in range(width):
-                        for ff in range(n_filters):
-                            imgval = imgs[rr + hh, cc + ww, ii]
-                            filterval = filters[hh, ww, ff]
-                            output[rr, cc, ii, ff] += imgval * filterval
+def main(argv: List[str]):
 
-def test_numba(A, B, C, prefetching=False):
-    if prefetching:
-        nbcorr_prefetching(A, B, C)
-    else:
-        nbcorr(A, B, C)
+    base_path = Path(argv[1])
 
-"""
+    for f in base_path.glob("*.jpg"):
+        img = get_image_data(f)
 
-def main():
-    pass 
+        print("[INFO] image data: ", img)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)

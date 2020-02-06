@@ -6,6 +6,7 @@ import numpy as np
 
 from PIL import Image
 from pathlib import Path
+from click import echo, style
 
 from typing import List
 
@@ -20,7 +21,7 @@ def timeit(f):
             name = kwargs.get("log_name", f.__name__.upper())
             kw["log_time"][name] = int((te - ts) * 1000)
         else:
-            print(f"[DEBUG] {f.__name__}  {((te - ts) * 1000):.2f} ms")
+            echo(style(f"[DEBUG] {f.__name__}  {((te - ts) * 1000):.2f} ms"))
 
         return result
 
@@ -54,7 +55,7 @@ def median_filter(img_arr: np.array) -> np.array:
 @timeit
 def get_image_data(filename: Path) -> np.array:
     with Image.open(filename) as img:
-        print("[INFO] extracting data from:", filename)
+        echo(style("[INFO] ", fg="green") + f"extracting data from: {filename}")
         return np.array(img)
 
 
@@ -65,7 +66,7 @@ def main(argv: List[str]):
     for f in base_path.glob("*.jpg"):
         img = get_image_data(f)
 
-        print("[INFO] image data: ", img)
+        echo(style(f"[INFO] ", fg="green") + f"image data: {type(img)}")
 
 
 if __name__ == "__main__":

@@ -6,8 +6,8 @@ import numpy as np
 
 from PIL import Image
 from pathlib import Path
-from collections import defaultdict
 from click import echo, style
+from collections import defaultdict
 
 from typing import List
 
@@ -23,7 +23,13 @@ def timeit(f):
             kwargs["log_time"][name] += int((te - ts) * 1000)
 
         else:
-            echo(style(f"[DEBUG] {f.__name__}  {((te - ts) * 1000):.2f} ms"))
+            echo(
+                style(
+                    f"[DEBUG] {f.__name__}  {((te - ts) * 1000):.2f} ms",
+                    bold=True,
+                    fg="pink",
+                )
+            )
 
         return result
 

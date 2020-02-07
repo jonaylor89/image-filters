@@ -67,7 +67,9 @@ def get_image_data(filename: Path, log_time=None) -> np.array:
 def main(argv: List[str]):
 
     base_path = Path(argv[1])
-    files = list(base_path.glob("*.jpg"))
+    echo(style("[INFO] ", fg="green") + f"image directory: {str(base_path)}")
+
+    files = list(base_path.glob("*.BMP"))
 
     time_data = defaultdict(int)
 

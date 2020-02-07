@@ -1,0 +1,5 @@
+
+*.zip
+Cancerous_cell_smears
+
+.mypy_cache/

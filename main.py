@@ -60,6 +60,10 @@ def median_filter(img_arr: np.array, log_time=None) -> np.array:
     pass
 
 
+def export_image(img_arr: np.array, filename: str) -> None:
+    pass
+
+
 @timeit
 def get_image_data(filename: Path, log_time=None) -> np.array:
     with Image.open(filename) as img:
@@ -83,6 +87,18 @@ def main(argv: List[str]):
         img = get_image_data(f, log_time=time_data)
 
         # echo(style("[INFO] ", fg="green") + f"image data: {type(img)}")
+        #
+        salt_and_pepper = season(img, log_time=time_data)
+        export_image(salt_and_pepper, "salt_and_pepper_" + f)
+
+        guass = gaussian_noise(img, log_time=time_data)
+        export_image(guass, "guassian_" + f)
+
+        linear = linear_filter(img, log_time=time_data)
+        export_image(linear, "linear_" + f)
+
+        median = median_filter(img, log_time=time_data)
+        export_image(median, "median_" + f)
 
     for k, v in time_data.items():
         echo(

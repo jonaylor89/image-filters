@@ -1,5 +1,10 @@
 
+# Project
 *.zip
 Cancerous_cell_smears
 
+# Python
 .mypy_cache/
+
+# MacOS
+.DS_Store

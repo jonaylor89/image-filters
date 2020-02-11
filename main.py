@@ -40,23 +40,35 @@ def calculate_histogram(img_array: np.array, log_time=None):
     pass
 
 
-def select_color(img_array: np.array, log_time=None) -> np.array:
+def histrogram_equalization(img_array: np.array, log_time=None):
     pass
 
 
-def season(img_arr: np.array, log_time=None) -> np.array:
+def select_color(img_array: np.array, color: str, log_time=None) -> np.array:
     pass
 
 
-def gaussian_noise(img_arr: np.array, log_time=None) -> np.array:
+@timeit
+def season(img_arr: np.array, strength: int, log_time=None) -> np.array:
     pass
 
 
-def linear_filter(img_arr: np.array, log_time=None) -> np.array:
+@timeit
+def gaussian_noise(img_arr: np.array, params: int, log_time=None) -> np.array:
     pass
 
 
-def median_filter(img_arr: np.array, log_time=None) -> np.array:
+@timeit
+def linear_filter(
+    img_arr: np.array, mask_size: int, weights: List[List[int]], log_time=None
+) -> np.array:
+    pass
+
+
+@timeit
+def median_filter(
+    img_arr: np.array, mask_size: int, weights: List[List[int]], log_time=None
+) -> np.array:
     pass
 
 
@@ -99,6 +111,9 @@ def main(argv: List[str]):
 
         median = median_filter(img, log_time=time_data)
         export_image(median, "median_" + f)
+
+        # calculate_histogram(img, log_time=time_data)
+        # histrogram_equalization(img, log_time=time_data)
 
     for k, v in time_data.items():
         echo(

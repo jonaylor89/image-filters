@@ -123,7 +123,7 @@ def season(img_arr: np.array, strength: int, log_time=None) -> np.array:
 @jit(nopython=True)
 def gaussian_filter(img_arr: np.array, params: int) -> np.array:
 
-    filter_size = 5 
+    filter_size = 5
     kernel = np.zeros((filter_size, filter_size))
 
     somme = 0
@@ -139,7 +139,6 @@ def gaussian_filter(img_arr: np.array, params: int) -> np.array:
     for i in range(filter_size):
         for j in range(filter_size):
             gauss[i][j] /= somme
-
 
     gauss = apply_filter(img_arr, kernel)
 

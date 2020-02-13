@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 from pathlib import Path
 from click import echo, style
+import matplotlib.pyplot as plt
 from collections import defaultdict
 
 from typing import List
@@ -37,10 +38,46 @@ def timeit(f):
 
 
 def calculate_histogram(img_array: np.array, log_time=None):
-    pass
+    """
+    >> h=zeros(256,1);              OR    >> h=zeros(256,1);
+    >> for l = 0 : 255                    >> for l = 0 : 255
+         for i = 1 : N                          h(l +1)=sum(sum(A == l));
+            for j = 1 : M                    end
+                if (A(i,j) == l)          >> bar(0:255,h);
+                    h(l +1) = h(l +1) +1;
+                end
+            end
+        end
+    end
+    >> bar(0:255,h);
+    """
+    
+    # Get the size of the image
+    N, M = img_array.shape
+
+    # Create blank histpgram
+    hist = np.zeros(256)
+
+    for l in range(256):
+        for i in range(N):
+            for j in range(M):
+
+                # Loop through pixels to calculate histogram
+                if img_arr[i][j] == 1:
+                    h[l+1] += 1
+
+    # Plot histogram
+    _ = plt.hist(a, bins='auto')
+    plt.title("Histogram with 'auto' bins")
+    plt.show()
 
 
 def histrogram_equalization(img_array: np.array, log_time=None):
+    """
+    g1(l) = ∑(l, k=0) pA(k) ⇒ g1(l)−g1(l −1) = pA(l) = hA(l)/NM (l = 1,...,255)
+
+    geA(l) = round(255g1(l))
+    """
     pass
 
 

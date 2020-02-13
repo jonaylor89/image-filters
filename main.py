@@ -132,7 +132,7 @@ def gaussian_filter(img_arr: np.array, params: int) -> np.array:
         for j in range(filter_size):
             x = i - (rows - 1) / 2.0
             y = j - (cols - 1) / 2.0
-            gauss[i][j] = K * exp(((x ** 2 + y ** 2) / (2 * sigma ** 2) * (-1)))
+            gauss[i][j] = K * np.exp(((x ** 2 + y ** 2) / (2 * sigma ** 2) * (-1)))
 
             somme += gauss[i][j]
 

@@ -11,6 +11,7 @@ pillow = "*"
 numpy = "*"
 matplotlib = "*"
 click = "*"
+numba = "*"
 
 [requires]
 python_version = "3.7"

@@ -2,15 +2,15 @@
 
 import sys
 import time
+import numba
 import numpy as np
 
 from PIL import Image
 from pathlib import Path
 from click import echo, style
 import matplotlib.pyplot as plt
-from collections import defaultdict
 
-from typing import List
+from typing import List, Tuple
 
 
 # timeit: decorator to time functions
@@ -21,14 +21,17 @@ def timeit(f):
         te = time.time()
         if "log_time" in kwargs:
             name = kwargs.get("log_name", f.__name__.upper())
+
+            if name not in kwargs["log_time"].keys():
+                kwargs["log_time"][name] = 0
+
             kwargs["log_time"][name] += int((te - ts) * 1000)
 
         else:
             echo(
                 style(
                     f"[DEBUG] {f.__name__}  {((te - ts) * 1000):.2f} ms",
-                    bold=True,
-                    fg="pink",
+                    fg="red",
                 )
             )
 
@@ -37,7 +40,18 @@ def timeit(f):
     return timed
 
 
-def calculate_histogram(img_array: np.array, log_time=None):
+@numba.jit(nopython=True)
+def cumsum(a):
+    a = iter(a)
+    b = [next(a)]
+    for i in a:
+        b.append(b[-1] + i)
+
+    return np.array(b)
+
+
+@numba.jit(nopython=True)
+def histogram(img_array):
     """
     >> h=zeros(256,1);              OR    >> h=zeros(256,1);
     >> for l = 0 : 255                    >> for l = 0 : 255
@@ -51,41 +65,68 @@ def calculate_histogram(img_array: np.array, log_time=None):
     end
     >> bar(0:255,h);
     """
-    
-    # Get the size of the image
-    N, M = img_array.shape
 
     # Create blank histpgram
     hist = np.zeros(256)
 
+    # Get size of pixel array
+    N = len(img_array)
+
     for l in range(256):
         for i in range(N):
-            for j in range(M):
 
-                # Loop through pixels to calculate histogram
-                if img_arr[i][j] == 1:
-                    h[l+1] += 1
+            # Loop through pixels to calculate histogram
+            if img_array.flat[i] == l:
+                hist[l] += 1
 
-    # Plot histogram
-    _ = plt.hist(a, bins='auto')
-    plt.title("Histogram with 'auto' bins")
-    plt.show()
+    return hist
 
 
-def histrogram_equalization(img_array: np.array, log_time=None):
+@timeit
+def calculate_histogram(img_array: np.array) -> np.array:
     """
     g1(l) = ∑(l, k=0) pA(k) ⇒ g1(l)−g1(l −1) = pA(l) = hA(l)/NM (l = 1,...,255)
 
     geA(l) = round(255g1(l))
     """
-    pass
+
+    flat = img_array.flatten()
+
+    hist = histogram(flat)
+    cs = cumsum(hist)
+
+    nj = (cs - cs.min()) * 255
+
+    N = cs.max() - cs.min()
+
+    cs = nj / N
+
+    cs = cs.astype('uint8')
+
+    equalized = cs[flat]
+    img_new = np.reshape(equalized, img_array.shape)
+
+    return hist, histogram(equalized), img_new
+
+def select_channel(img_array: np.array, color: str = "", log_time=None) -> np.array:
+
+    if color == "red":
+        return img_array[:, :, 0]
+
+    elif color == "green":
+        return img_array[:, :, 1]
+
+    elif color == "blue":
+        return img_array[:, :, 2]
+
+    else:
+        # Default to using the default greyscaling Pillow does
+        img = Image.fromarray(img_array, 'L')
+
+        return np.array(img)
 
 
-def select_color(img_array: np.array, color: str, log_time=None) -> np.array:
-    pass
-
-
-@timeit
+@timeit 
 def season(img_arr: np.array, strength: int, log_time=None) -> np.array:
     pass
 
@@ -110,8 +151,13 @@ def median_filter(
 
 
 def export_image(img_arr: np.array, filename: str) -> None:
-    pass
+    img = Image.fromarray(img_arr)
+    img.save(filename)
 
+def export_plot(img_arr: np.array, filename: str) -> None:
+    _ = plt.hist(img_arr, bins=256, range=(0, 256))
+    plt.title(filename)
+    plt.savefig(filename + ".png")
 
 @timeit
 def get_image_data(filename: Path, log_time=None) -> np.array:
@@ -122,14 +168,6 @@ def get_image_data(filename: Path, log_time=None) -> np.array:
         )
         return np.array(img)
 
-def create_output_directories():
-    Path("datasets/grey").mkdir(parents=True, exist_ok=True)
-    Path("datasets/linear").mkdir(parents=True, exist_ok=True)
-    Path("datasets/median").mkdir(parents=True, exist_ok=True)
-    Path("datasets/salt_and_pepper").mkdir(parents=True, exist_ok=True)
-    Path("datasets/gaussian").mkdir(parents=True, exist_ok=True)
-    Path("datasets/histograms").mkdir(parents=True, exist_ok=True)
-    Path("datasets/equalization_histograms").mkdir(parents=True, exist_ok=True)
 
 def main(argv: List[str]):
 
@@ -138,27 +176,39 @@ def main(argv: List[str]):
 
     files = list(base_path.glob("*.BMP"))
 
-    create_output_directories()
+    Path("datasets/output").mkdir(parents=True, exist_ok=True)
 
-    time_data = defaultdict(int)
+    time_data = {}
 
     t0 = time.time()
+
+    # [!!!] Only for development
+    files = files[:5]
+
     for f in files:
-        img = get_image_data(f, log_time=time_data)
+
+        color_img = get_image_data(f, log_time=time_data)
 
         # echo(style("[INFO] ", fg="green") + f"image data: {type(img)}")
-        #
-        salt_and_pepper = season(img, log_time=time_data)
-        export_image(salt_and_pepper, "salt_and_pepper_" + f)
 
-        guass = gaussian_noise(img, log_time=time_data)
-        export_image(guass, "guassian_" + f)
+        img = select_channel(color_img, color="red")
+        
+        salt_and_pepper = season(img, 5, log_time=time_data)
+        # export_image(salt_and_pepper, "salt_and_pepper_" + f)
 
-        linear = linear_filter(img, log_time=time_data)
-        export_image(linear, "linear_" + f)
+        guass = gaussian_noise(img, 5, log_time=time_data)
+        # export_image(guass, "guassian_" + f)
 
-        median = median_filter(img, log_time=time_data)
-        export_image(median, "median_" + f)
+        linear = linear_filter(img, 9, [[0]], log_time=time_data)
+        # export_image(linear, "linear_" + f)
+
+        median = median_filter(img, 9, [[0]], log_time=time_data)
+        # export_image(median, "median_" + f)
+
+        histogram, equalized, _ = calculate_histogram(img)
+        # export_plot(histogram, "datasets/output/histogram_" + f.stem)
+        # export_plot(equalized, "datasets/output/histogram_equalized_" + f.stem)
+
 
         # calculate_histogram(img, log_time=time_data)
         # histrogram_equalization(img, log_time=time_data)
@@ -169,11 +219,11 @@ def main(argv: List[str]):
         echo(
             style("[INFO] ", fg="green")
             + "average time data: "
-            + style(f"{k} : {(v / len(files)):.2f} ms", bold=True, fg="red")
+            + style(f"{k} : {(v / len(files)):.2f} ms", fg="red")
         )
 
 
-    echo(f"[INFO] Total time: {t_delta}", bold=True, fg="red")
+    echo(style(f"[INFO] Total time: {t_delta}", fg="red"))
 
 if __name__ == "__main__":
     main(sys.argv)

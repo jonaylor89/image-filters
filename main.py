@@ -122,6 +122,14 @@ def get_image_data(filename: Path, log_time=None) -> np.array:
         )
         return np.array(img)
 
+def create_output_directories():
+    Path("datasets/grey").mkdir(parents=True, exist_ok=True)
+    Path("datasets/linear").mkdir(parents=True, exist_ok=True)
+    Path("datasets/median").mkdir(parents=True, exist_ok=True)
+    Path("datasets/salt_and_pepper").mkdir(parents=True, exist_ok=True)
+    Path("datasets/gaussian").mkdir(parents=True, exist_ok=True)
+    Path("datasets/histograms").mkdir(parents=True, exist_ok=True)
+    Path("datasets/equalization_histograms").mkdir(parents=True, exist_ok=True)
 
 def main(argv: List[str]):
 
@@ -130,8 +138,11 @@ def main(argv: List[str]):
 
     files = list(base_path.glob("*.BMP"))
 
+    create_output_directories()
+
     time_data = defaultdict(int)
 
+    t0 = time.time()
     for f in files:
         img = get_image_data(f, log_time=time_data)
 
@@ -152,6 +163,8 @@ def main(argv: List[str]):
         # calculate_histogram(img, log_time=time_data)
         # histrogram_equalization(img, log_time=time_data)
 
+    t_delta = time.time() - t0
+
     for k, v in time_data.items():
         echo(
             style("[INFO] ", fg="green")
@@ -159,6 +172,8 @@ def main(argv: List[str]):
             + style(f"{k} : {(v / len(files)):.2f} ms", bold=True, fg="red")
         )
 
+
+    echo(f"[INFO] Total time: {t_delta}", bold=True, fg="red")
 
 if __name__ == "__main__":
     main(sys.argv)

@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 
 from typing import List, Tuple
 
+OUTPUT_DIR = "datasets/output/"
 
 # timeit: decorator to time functions
 def timeit(f):
@@ -20,7 +21,7 @@ def timeit(f):
         result = f(*args, **kwargs)
         te = time.time()
 
-        echo(style(f"[DEBUG] {f.__name__}  {((te - ts) * 1000):.2f} ms", fg="red"))
+        echo(style("[DEBUG] ", fg="red") + f"{f.__name__}  {((te - ts) * 1000):.2f} ms")
 
         return result
 
@@ -115,15 +116,38 @@ def select_channel(img_array: np.array, color: str = "", log_time=None) -> np.ar
 
 
 @timeit
-def season_noise(img_arr: np.array, strength: int, log_time=None) -> np.array:
-    pass
+@jit(nopython=True)
+def season_noise(img_array, strength: int) -> np.array:
+    s_vs_p = 0.5
+    out = np.copy(img_array)
+
+    # Generate Salt '1' noise
+    num_salt = np.ceil(strength * img_array.size * s_vs_p)
+
+    for i in range(int(num_salt)):
+            x = np.random.randint(0, img_array.shape[0] - 1)
+            y = np.random.randint(0, img_array.shape[1] - 1)
+            out[x][y] = 0
+
+    # Generate Pepper '0' noise
+    num_pepper = np.ceil(strength * img_array.size * (1.0 - s_vs_p))
+
+    for i in range(int(num_pepper)):
+            x = np.random.randint(0, img_array.shape[0] - 1)
+            y = np.random.randint(0, img_array.shape[1] - 1)
+            out[x][y] = 0
+
+    return out
 
 
 @timeit
 @jit(nopython=True)
 def gaussian_noise(img_array: np.array, params: int) -> np.array:
+    mean = 0.0
+    var = 0.01
+    sigma = var**0.5
 
-    noise = np.random.normal(0,1,img_array.size)
+    noise = np.random.normal(mean, sigma, img_array.size)
     shaped_noise = noise.reshape(img_array.shape)
 
     gauss = img_array + shaped_noise
@@ -150,9 +174,9 @@ def median_filter(
 
 
 @jit(nopython=True)
-def apply_filter(img_arr, filter):
+def apply_filter(img_arr, img_filter):
     rows, cols = imgs.shape
-    height, width = filter.shape
+    height, width = img_filter.shape
 
     output = np.zeros((cols - height + 1, rows - width + 1))
 
@@ -161,7 +185,7 @@ def apply_filter(img_arr, filter):
             for hh in range(height):
                 for ww in range(width):
                     imgval = img_arr[rr + hh, cc + ww]
-                    filterval = filter[hh, ww]
+                    filterval = img_filter[hh, ww]
                     output[rr, cc] += imgval * filterval
 
     return output
@@ -169,22 +193,18 @@ def apply_filter(img_arr, filter):
 
 def export_image(img_arr: np.array, filename: str) -> None:
     img = Image.fromarray(img_arr)
-    img.save(filename)
+    img.save(OUTPUT_DIR + filename + ".BMP")
 
 
 def export_plot(img_arr: np.array, filename: str) -> None:
     _ = plt.hist(img_arr, bins=256, range=(0, 256))
     plt.title(filename)
-    plt.savefig(filename + ".png")
+    plt.savefig(OUTPUT_DIR + filename + ".png")
 
 
 @timeit
 def get_image_data(filename: Path, log_time=None) -> np.array:
     with Image.open(filename) as img:
-        echo(
-            style("[INFO] ", fg="green")
-            + f"extracting data from: {style(str(filename), fg='cyan')}"
-        )
         return np.array(img)
 
 
@@ -202,19 +222,24 @@ def main(argv: List[str]):
     t0 = time.time()
 
     # [!!!] Only for development
-    files = files[:5]
+    files = files[:1]
 
     for f in files:
+        echo(
+            style(f"[INFO:{f.stem}] ", fg="green")
+            + f"extracting data from: {style(str(f), fg='cyan')}"
+        )
 
         color_img = get_image_data(f, log_time=time_data)
+        copy_color_img = np.copy(color_img)
 
         # echo(style("[INFO] ", fg="green") + f"image data: {type(img)}")
 
         img = select_channel(color_img, color="red")
 
-        salt_and_pepper = season_noise(img, 5)
+        salt_and_pepper = season_noise(img, 0.4)
 
-        guass = gaussian_noise(img, 5)
+        gauss = gaussian_noise(img, 10)
 
         linear = linear_filter(img, 9, [[0]])
 
@@ -222,13 +247,18 @@ def main(argv: List[str]):
 
         histogram, equalized, _ = calculate_histogram(img)
 
-        echo(style("[INFO]", fg="green") + "exporting plots and images for {f.stem}...")
-        # export_image(salt_and_pepper, "salt_and_pepper_" + f)
-        # export_image(guass, "guassian_" + f.stem)
-        # export_image(linear, "linear_" + f)
-        # export_image(median, "median_" + f)
-        # export_plot(histogram, "datasets/output/histogram_" + f.stem)
-        # export_plot(equalized, "datasets/output/histogram_equalized_" + f.stem)
+        echo(style(f"[INFO:{f.stem}] ", fg="green") + f"exporting plots and images for {f.stem}...")
+
+        copy_color_img[:, :, 0] = salt_and_pepper
+        export_image(copy_color_img, "salt_and_pepper_" + f.stem)
+
+        copy_color_img[:, :, 0] = gauss
+        export_image(copy_color_img, "gaussian_" + f.stem)
+
+        # export_image(linear, "linear_" + f.stem)
+        # export_image(median, "median_" + f.stem)
+        export_plot(histogram, "histogram_" + f.stem)
+        export_plot(equalized, "histogram_equalized_" + f.stem)
 
     t_delta = time.time() - t0
 
@@ -239,7 +269,8 @@ def main(argv: List[str]):
             + style(f"{k} : {(v / len(files)):.2f} ms", fg="red")
         )
 
-    echo(style(f"[INFO] Total time: {t_delta}", fg="red"))
+    print()
+    echo(style(f"[INFO] Total time: {t_delta}", fg="cyan"))
 
 
 if __name__ == "__main__":

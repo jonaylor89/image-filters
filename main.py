@@ -115,32 +115,18 @@ def select_channel(img_array: np.array, color: str = "", log_time=None) -> np.ar
 
 
 @timeit
-def season(img_arr: np.array, strength: int, log_time=None) -> np.array:
+def season_noise(img_arr: np.array, strength: int, log_time=None) -> np.array:
     pass
 
 
 @timeit
 @jit(nopython=True)
-def gaussian_filter(img_arr: np.array, params: int) -> np.array:
+def gaussian_noise(img_array: np.array, params: int) -> np.array:
 
-    filter_size = 5
-    kernel = np.zeros((filter_size, filter_size))
+    noise = np.random.normal(0,1,img_array.size)
+    shaped_noise = noise.reshape(img_array.shape)
 
-    somme = 0
-
-    for i in range(filter_size):
-        for j in range(filter_size):
-            x = i - (rows - 1) / 2.0
-            y = j - (cols - 1) / 2.0
-            gauss[i][j] = K * np.exp(((x ** 2 + y ** 2) / (2 * sigma ** 2) * (-1)))
-
-            somme += gauss[i][j]
-
-    for i in range(filter_size):
-        for j in range(filter_size):
-            gauss[i][j] /= somme
-
-    gauss = apply_filter(img_arr, kernel)
+    gauss = img_array + shaped_noise
 
     return gauss
 
@@ -150,7 +136,8 @@ def linear_filter(
     img_arr: np.array, mask_size: int, weights: List[List[int]]
 ) -> np.array:
 
-    linear = apply_filter(img_size)
+    # linear = apply_filter(img_size)
+    pass
 
 
 @timeit
@@ -158,13 +145,14 @@ def median_filter(
     img_arr: np.array, mask_size: int, weights: List[List[int]]
 ) -> np.array:
 
-    median = apply_filter(img_arr, median)
+    # median = apply_filter(img_arr, median)
+    pass
 
 
 @jit(nopython=True)
 def apply_filter(img_arr, filter):
     rows, cols = imgs.shape
-    height, width = filters.shape
+    height, width = filter.shape
 
     output = np.zeros((cols - height + 1, rows - width + 1))
 
@@ -224,24 +212,23 @@ def main(argv: List[str]):
 
         img = select_channel(color_img, color="red")
 
-        salt_and_pepper = season(img, 5, log_time=time_data)
-        # export_image(salt_and_pepper, "salt_and_pepper_" + f)
+        salt_and_pepper = season_noise(img, 5)
 
-        guass = gaussian_filter(img, 5, log_time=time_data)
-        # export_image(guass, "guassian_" + f)
+        guass = gaussian_noise(img, 5)
 
-        linear = linear_filter(img, 9, [[0]], log_time=time_data)
-        # export_image(linear, "linear_" + f)
+        linear = linear_filter(img, 9, [[0]])
 
-        median = median_filter(img, 9, [[0]], log_time=time_data)
-        # export_image(median, "median_" + f)
+        median = median_filter(img, 9, [[0]])
 
         histogram, equalized, _ = calculate_histogram(img)
+
+        echo(style("[INFO]", fg="green") + "exporting plots and images for {f.stem}...")
+        # export_image(salt_and_pepper, "salt_and_pepper_" + f)
+        # export_image(guass, "guassian_" + f.stem)
+        # export_image(linear, "linear_" + f)
+        # export_image(median, "median_" + f)
         # export_plot(histogram, "datasets/output/histogram_" + f.stem)
         # export_plot(equalized, "datasets/output/histogram_equalized_" + f.stem)
-
-        # calculate_histogram(img, log_time=time_data)
-        # histrogram_equalization(img, log_time=time_data)
 
     t_delta = time.time() - t0
 

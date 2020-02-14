@@ -8,7 +8,8 @@ from numba import jit
 from PIL import Image
 from pathlib import Path
 from click import echo, style
-import matplotlib.pyplot as plt
+
+from matplotlib import pyplot as plt
 
 from typing import List, Tuple
 
@@ -125,17 +126,17 @@ def season_noise(img_array, strength: int) -> np.array:
     num_salt = np.ceil(strength * img_array.size * s_vs_p)
 
     for i in range(int(num_salt)):
-            x = np.random.randint(0, img_array.shape[0] - 1)
-            y = np.random.randint(0, img_array.shape[1] - 1)
-            out[x][y] = 0
+        x = np.random.randint(0, img_array.shape[0] - 1)
+        y = np.random.randint(0, img_array.shape[1] - 1)
+        out[x][y] = 0
 
     # Generate Pepper '0' noise
     num_pepper = np.ceil(strength * img_array.size * (1.0 - s_vs_p))
 
     for i in range(int(num_pepper)):
-            x = np.random.randint(0, img_array.shape[0] - 1)
-            y = np.random.randint(0, img_array.shape[1] - 1)
-            out[x][y] = 0
+        x = np.random.randint(0, img_array.shape[0] - 1)
+        y = np.random.randint(0, img_array.shape[1] - 1)
+        out[x][y] = 0
 
     return out
 
@@ -145,7 +146,7 @@ def season_noise(img_array, strength: int) -> np.array:
 def gaussian_noise(img_array: np.array, params: int) -> np.array:
     mean = 0.0
     var = 0.01
-    sigma = var**0.5
+    sigma = var ** 0.5
 
     noise = np.random.normal(mean, sigma, img_array.size)
     shaped_noise = noise.reshape(img_array.shape)
@@ -247,7 +248,10 @@ def main(argv: List[str]):
 
         histogram, equalized, _ = calculate_histogram(img)
 
-        echo(style(f"[INFO:{f.stem}] ", fg="green") + f"exporting plots and images for {f.stem}...")
+        echo(
+            style(f"[INFO:{f.stem}] ", fg="green")
+            + f"exporting plots and images for {f.stem}..."
+        )
 
         copy_color_img[:, :, 0] = salt_and_pepper
         export_image(copy_color_img, "salt_and_pepper_" + f.stem)

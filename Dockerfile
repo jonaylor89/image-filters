@@ -6,6 +6,6 @@ COPY . /app/
 
 RUN pipenv install --deploy --system
 
-RUN mkdir /app/datasets/Cancerous_cell_smears
+RUN mkdir -p /app/datasets/Cancerous_cell_smears
 
 CMD ["python3", "/app/main.py", "/app/datasets/Cancerous_cell_smears"]

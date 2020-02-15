@@ -73,3 +73,7 @@ def test_numba(A, B, C, prefetching=False):
     else:
         nbcorr(A, B, C)
 ```
+
+```sh
+docker run -it -v /Users/johannes/Repos/CMSC630_Project_1/datasets:/app/datasets jonaylor/cmsc_project_1
+```

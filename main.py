@@ -22,7 +22,7 @@ def timeit(f):
         result = f(*args, **kwargs)
         te = time.time()
 
-        echo(style("[DEBUG] ", fg="red") + f"{f.__name__}  {((te - ts) * 1000):.2f} ms")
+        echo(style("[INFO] ", fg="green") + f"{f.__name__}  {((te - ts) * 1000):.2f} ms")
 
         return result
 

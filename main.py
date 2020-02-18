@@ -145,8 +145,7 @@ def season_noise(img_array, strength: int) -> np.array:
 @jit(nopython=True)
 def gaussian_noise(img_array: np.array, params: int) -> np.array:
     mean = 0.0
-    var = 0.01
-    sigma = var ** 0.5
+    sigma = params ** 0.5
 
     noise = np.random.normal(mean, sigma, img_array.size)
     shaped_noise = noise.reshape(img_array.shape)
@@ -240,7 +239,7 @@ def main(argv: List[str]):
 
         salt_and_pepper = season_noise(img, 0.4)
 
-        gauss = gaussian_noise(img, 10)
+        gauss = gaussian_noise(img, 0.01)
 
         linear = linear_filter(img, 9, [[0]])
 

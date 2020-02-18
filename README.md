@@ -15,28 +15,6 @@
 
 
 ```python
-import numpy as np
-import numba
-from numba.decorators import jit
-from numba import double
-#from numba import double, jit
-
-nd4type = numba.double[:,:,:,:]
-nd3type = numba.double[:,:,:]
-
-@jit(nopython=True)
-def nb_get_data(N=N, n_N=n_N, M=M, n_M=n_M, seed=42, prefetching=False):
-    np.random.seed(seed)
-    if prefetching:
-        A = np.random.rand(n_N, N, N)
-        B = np.random.rand(n_M, M, M)
-        C = np.zeros((n_N, n_M, N, N))
-    else:
-        A = np.random.rand(N, N, n_N)
-        B = np.random.rand(M, M, n_M)
-        C = np.zeros((N, N, n_N, n_M))
-    return A, B, C
-
 @jit((nd3type, nd3type, nd4type))
 def nbcorr_prefetching(imgs, filters, output):
     n_imgs, n_rows, n_cols = imgs.shape

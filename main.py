@@ -22,7 +22,9 @@ def timeit(f):
         result = f(*args, **kwargs)
         te = time.time()
 
-        echo(style("[INFO] ", fg="green") + f"{f.__name__}  {((te - ts) * 1000):.2f} ms")
+        echo(
+            style("[INFO] ", fg="green") + f"{f.__name__}  {((te - ts) * 1000):.2f} ms"
+        )
 
         return result
 
@@ -72,6 +74,7 @@ def histogram(img_array):
 
 
 @timeit
+@jit(nopython=True)
 def calculate_histogram(img_array: np.array) -> np.array:
     """
     g1(l) = ∑(l, k=0) pA(k) ⇒ g1(l)−g1(l −1) = pA(l) = hA(l)/NM (l = 1,...,255)
@@ -90,9 +93,9 @@ def calculate_histogram(img_array: np.array) -> np.array:
 
     cs = nj / N
 
-    cs = cs.astype("uint8")
+    cs_casted = cs.astype(np.uint8)
 
-    equalized = cs[flat]
+    equalized = cs_casted[flat]
     img_new = np.reshape(equalized, img_array.shape)
 
     return hist, histogram(equalized), img_new
@@ -159,7 +162,6 @@ def linear_filter(
     img_array: np.array, mask_size: int, weights: List[List[int]]
 ) -> np.array:
 
-
     filter = np.array(weights)
     linear = apply_filter(img_array, filter)
 
@@ -175,6 +177,7 @@ def median_filter(
     median = apply_filter(img_array, filter)
 
     return median
+
 
 @jit(nopython=True)
 def apply_filter(img_array, img_filter):
@@ -226,7 +229,7 @@ def main(argv: List[str]):
     t0 = time.time()
 
     # [!!!] Only for development
-    files = files[:1]
+    files = files[:10]
 
     for f in files:
         echo(
@@ -247,10 +250,10 @@ def main(argv: List[str]):
         gauss = gaussian_noise(img, 0.01 ** 0.5)
 
         # Apply linear filter to image
-        linear = linear_filter(img, 1, [[0]])
+        linear = linear_filter(img, 9, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
 
         # Apply median filter to image
-        median = median_filter(img, 1, [[0]])
+        median = median_filter(img, 1, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
 
         # Calculate histogram for image
         histogram, equalized, equalized_image = calculate_histogram(img)
@@ -271,12 +274,12 @@ def main(argv: List[str]):
 
         # Crop image
         size = linear.shape
-        cropped_copy_color_img = copy_color_img[:size[0], :size[1], :]
+        cropped_copy_color_img = copy_color_img[: size[0], : size[1], :]
         cropped_copy_color_img[:, :, 0] = linear
         export_image(cropped_copy_color_img, "linear_" + f.stem)
 
         size = median.shape
-        cropped_copy_color_img = copy_color_img[:size[0], :size[1], :]
+        cropped_copy_color_img = copy_color_img[: size[0], : size[1], :]
         cropped_copy_color_img[:, :, 0] = median
         export_image(cropped_copy_color_img, "median_" + f.stem)
 

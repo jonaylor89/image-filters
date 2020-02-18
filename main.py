@@ -143,9 +143,8 @@ def season_noise(img_array, strength: int) -> np.array:
 
 @timeit
 @jit(nopython=True)
-def gaussian_noise(img_array: np.array, params: int) -> np.array:
+def gaussian_noise(img_array: np.array, sigma: int) -> np.array:
     mean = 0.0
-    sigma = params ** 0.5
 
     noise = np.random.normal(mean, sigma, img_array.size)
     shaped_noise = noise.reshape(img_array.shape)
@@ -157,34 +156,39 @@ def gaussian_noise(img_array: np.array, params: int) -> np.array:
 
 @timeit
 def linear_filter(
-    img_arr: np.array, mask_size: int, weights: List[List[int]]
+    img_array: np.array, mask_size: int, weights: List[List[int]]
 ) -> np.array:
 
-    # linear = apply_filter(img_size)
-    pass
+
+    filter = np.array(weights)
+    linear = apply_filter(img_array, filter)
+
+    return linear
 
 
 @timeit
 def median_filter(
-    img_arr: np.array, mask_size: int, weights: List[List[int]]
+    img_array: np.array, mask_size: int, weights: List[List[int]]
 ) -> np.array:
 
-    # median = apply_filter(img_arr, median)
-    pass
+    filter = np.array(weights)
+    median = apply_filter(img_array, filter)
 
+    return median
 
 @jit(nopython=True)
-def apply_filter(img_arr, img_filter):
-    rows, cols = imgs.shape
+def apply_filter(img_array, img_filter):
+
+    rows, cols = img_array.shape
     height, width = img_filter.shape
 
-    output = np.zeros((cols - height + 1, rows - width + 1))
+    output = np.zeros((rows - height + 1, cols - width + 1))
 
-    for rr in range(n_rows - height + 1):
-        for cc in range(n_cols - width + 1):
+    for rr in range(rows - height + 1):
+        for cc in range(cols - width + 1):
             for hh in range(height):
                 for ww in range(width):
-                    imgval = img_arr[rr + hh, cc + ww]
+                    imgval = img_array[rr + hh, cc + ww]
                     filterval = img_filter[hh, ww]
                     output[rr, cc] += imgval * filterval
 
@@ -233,19 +237,23 @@ def main(argv: List[str]):
         color_img = get_image_data(f, log_time=time_data)
         copy_color_img = np.copy(color_img)
 
-        # echo(style("[INFO] ", fg="green") + f"image data: {type(img)}")
-
+        # Grey scale image
         img = select_channel(color_img, color="red")
 
+        # Create salt and peppered noise image
         salt_and_pepper = season_noise(img, 0.4)
 
-        gauss = gaussian_noise(img, 0.01)
+        # Create gaussian noise image
+        gauss = gaussian_noise(img, 0.01 ** 0.5)
 
-        linear = linear_filter(img, 9, [[0]])
+        # Apply linear filter to image
+        linear = linear_filter(img, 1, [[0]])
 
-        median = median_filter(img, 9, [[0]])
+        # Apply median filter to image
+        median = median_filter(img, 1, [[0]])
 
-        histogram, equalized, _ = calculate_histogram(img)
+        # Calculate histogram for image
+        histogram, equalized, equalized_image = calculate_histogram(img)
 
         echo(
             style(f"[INFO:{f.stem}] ", fg="green")
@@ -258,8 +266,20 @@ def main(argv: List[str]):
         copy_color_img[:, :, 0] = gauss
         export_image(copy_color_img, "gaussian_" + f.stem)
 
-        # export_image(linear, "linear_" + f.stem)
-        # export_image(median, "median_" + f.stem)
+        copy_color_img[:, :, 0] = equalized_image
+        export_image(copy_color_img, "equalized_" + f.stem)
+
+        # Crop image
+        size = linear.shape
+        cropped_copy_color_img = copy_color_img[:size[0], :size[1], :]
+        cropped_copy_color_img[:, :, 0] = linear
+        export_image(cropped_copy_color_img, "linear_" + f.stem)
+
+        size = median.shape
+        cropped_copy_color_img = copy_color_img[:size[0], :size[1], :]
+        cropped_copy_color_img[:, :, 0] = median
+        export_image(cropped_copy_color_img, "median_" + f.stem)
+
         export_plot(histogram, "histogram_" + f.stem)
         export_plot(equalized, "histogram_equalized_" + f.stem)
 

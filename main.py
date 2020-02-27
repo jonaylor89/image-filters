@@ -157,28 +157,6 @@ def gaussian_noise(img_array: np.array, sigma: int) -> np.array:
     return gauss
 
 
-@timeit
-def linear_filter(
-    img_array: np.array, mask_size: int, weights: List[List[int]]
-) -> np.array:
-
-    filter = np.array(weights)
-    linear = apply_filter(img_array, filter)
-
-    return linear
-
-
-@timeit
-def median_filter(
-    img_array: np.array, mask_size: int, weights: List[List[int]]
-) -> np.array:
-
-    filter = np.array(weights)
-    median = apply_filter(img_array, filter)
-
-    return median
-
-
 @jit(nopython=True)
 def apply_filter(img_array, img_filter):
 
@@ -196,6 +174,52 @@ def apply_filter(img_array, img_filter):
                     output[rr, cc] += imgval * filterval
 
     return output
+
+
+@timeit
+def linear_filter(
+    img_array: np.array, mask_size: int, weights: List[List[int]]
+) -> np.array:
+
+    filter = np.array(weights)
+    linear = apply_filter(img_array, filter)
+
+    return linear
+
+
+@timeit
+@jit(nopython=True)
+def median_filter(img_array: np.array, mask_size: int) -> np.array:
+
+    rows, cols = img_array.shape
+
+    pixel_values = np.zeros(mask_size ** 2)
+    filtered_image = np.zeros((rows, cols))
+
+    # Scan through the image and compute the median of the local pixel values at each pixel position.
+    for r in range(rows):
+        for c in range(cols):
+
+            p = 0
+            row_mask_start = r - mask_size / 2
+            row_mask_end = r - (mask_size / 2) + mask_size
+            for rr in range(row_mask_start, row_mask_end):
+
+                col_mask_start = c - mask_size / 2
+                col_mask_end = c - (mask_size / 2) + mask_size
+                for cc in range(col_mask_start, col_mask_end):
+
+                    if (rr >= 0) and (rr < rows) and (cc >= 0) and (cc < cols):
+                        pixel_values[p] = img_array[rr][cc]
+                        p += 1
+
+            # Sort the array of pixels inplace
+            pixel_values.sort()
+
+            # Assign the median pixel value to the filtered image.
+            filtered_image[r][c] = pixel_values[p // 2]
+
+    return filtered_image
 
 
 def export_image(img_arr: np.array, filename: str) -> None:
@@ -253,7 +277,7 @@ def main(argv: List[str]):
         linear = linear_filter(img, 9, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
 
         # Apply median filter to image
-        median = median_filter(img, 1, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+        median = median_filter(img, 9)
 
         # Calculate histogram for image
         histogram, equalized, equalized_image = calculate_histogram(img)

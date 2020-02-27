@@ -253,7 +253,7 @@ def main(argv: List[str]):
     t0 = time.time()
 
     # [!!!] Only for development
-    files = files[:10]
+    files = files[:5]
 
     for f in files:
         echo(
@@ -277,7 +277,7 @@ def main(argv: List[str]):
         linear = linear_filter(img, 9, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
 
         # Apply median filter to image
-        median = median_filter(img, 9)
+        median = median_filter(img, 1)
 
         # Calculate histogram for image
         histogram, equalized, equalized_image = calculate_histogram(img)

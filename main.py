@@ -201,12 +201,15 @@ def median_filter(img_array: np.array, mask_size: int) -> np.array:
         for c in range(cols):
 
             p = 0
+
             row_mask_start = r - mask_size / 2
             row_mask_end = r - (mask_size / 2) + mask_size
+
+            col_mask_start = c - mask_size / 2
+            col_mask_end = c - (mask_size / 2) + mask_size
+
             for rr in range(row_mask_start, row_mask_end):
 
-                col_mask_start = c - mask_size / 2
-                col_mask_end = c - (mask_size / 2) + mask_size
                 for cc in range(col_mask_start, col_mask_end):
 
                     if (rr >= 0) and (rr < rows) and (cc >= 0) and (cc < cols):

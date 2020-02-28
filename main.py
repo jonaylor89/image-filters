@@ -187,42 +187,40 @@ def linear_filter(
     return linear
 
 
-@timeit
 @jit(nopython=True)
-def median_filter(img_array: np.array, mask_size: int) -> np.array:
+def apply_median_filter(img_array: np.array, img_filter: np.array) -> np.array:
 
     rows, cols = img_array.shape
+    height, width = img_filter.shape
 
-    pixel_values = np.zeros(mask_size ** 2)
-    filtered_image = np.zeros((rows, cols))
+    pixel_values = np.zeros(img_filter.size ** 2)
+    output = np.zeros((rows - height + 1, cols - width + 1))
 
-    # Scan through the image and compute the median of the local pixel values at each pixel position.
-    for r in range(rows):
-        for c in range(cols):
+    for rr in range(rows - height + 1):
+        for cc in range(cols - width + 1):
 
             p = 0
+            for hh in range(height):
+                for ww in range(width):
 
-            row_mask_start = r - mask_size / 2
-            row_mask_end = r - (mask_size / 2) + mask_size
-
-            col_mask_start = c - mask_size / 2
-            col_mask_end = c - (mask_size / 2) + mask_size
-
-            for rr in range(row_mask_start, row_mask_end):
-
-                for cc in range(col_mask_start, col_mask_end):
-
-                    if (rr >= 0) and (rr < rows) and (cc >= 0) and (cc < cols):
-                        pixel_values[p] = img_array[rr][cc]
-                        p += 1
+                    pixel_values[p] = img_array[hh][ww]
+                    p += 1
 
             # Sort the array of pixels inplace
             pixel_values.sort()
 
             # Assign the median pixel value to the filtered image.
-            filtered_image[r][c] = pixel_values[p // 2]
+            output[rr][cc] = pixel_values[p // 2]
 
-    return filtered_image
+    return output
+
+@timeit
+def median_filter(img_array: np.array, mask_size: int, weights: List[List[int]]) -> np.array:
+
+    filter = np.array(weights)
+    median = apply_median_filter(img_array, filter)
+
+    return median
 
 
 def export_image(img_arr: np.array, filename: str) -> None:
@@ -280,7 +278,7 @@ def main(argv: List[str]):
         linear = linear_filter(img, 9, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
 
         # Apply median filter to image
-        median = median_filter(img, 1)
+        median = median_filter(img, 9, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
 
         # Calculate histogram for image
         histogram, equalized, equalized_image = calculate_histogram(img)

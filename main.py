@@ -2,6 +2,7 @@
 
 import sys
 import time
+import toml
 import numpy as np
 from PIL import Image
 from pathlib import Path
@@ -11,9 +12,9 @@ from matplotlib import pyplot as plt
 from numba import njit, jit
 from typing import List, Tuple
 
-OUTPUT_DIR = "datasets/output/"
+conf = toml.load("config.toml")
 
-NUM_OF_PROCESSES = 10
+DATA_SUBSET = 5
 
 # timeit: decorator to time functions
 def timeit(f):
@@ -229,13 +230,13 @@ def median_filter(
 def export_image(img_arr: np.array, filename: str) -> None:
     img = Image.fromarray(img_arr)
     img = img.convert("L")
-    img.save(OUTPUT_DIR + filename + ".BMP")
+    img.save(conf["OUTPUT_DIR"] + filename + ".BMP")
 
 
 def export_plot(img_arr: np.array, filename: str) -> None:
     _ = plt.hist(img_arr, bins=256, range=(0, 256))
     plt.title(filename)
-    plt.savefig(OUTPUT_DIR + filename + ".png")
+    plt.savefig(conf["OUTPUT_DIR"] + filename + ".png")
     plt.close()
 
 
@@ -243,6 +244,7 @@ def export_plot(img_arr: np.array, filename: str) -> None:
 def get_image_data(filename: Path, log_time=None) -> np.array:
     with Image.open(filename) as img:
         return np.array(img)
+
 
 def apply_operations(img_file):
     try:
@@ -254,19 +256,19 @@ def apply_operations(img_file):
         color_img = get_image_data(img_file)
 
         # Grey scale image
-        img = select_channel(color_img, color="red")
+        img = select_channel(color_img, color=conf["COLOR_CHANNEL"])
 
         # Create salt and peppered noise image
-        salt_and_pepper = season_noise(img, 0.4)
+        salt_and_pepper = season_noise(img, conf["SALT_PEPPER_STRENGTH"])
 
         # Create gaussian noise image
-        gauss = gaussian_noise(img, 0.01 ** 0.5)
+        gauss = gaussian_noise(img, conf["GAUSS_NOISE_STRENGTH"])
 
         # Apply linear filter to image
-        linear = linear_filter(img, 9, [[0, 0, 0], [0, 1, 0], [0, 0, 0]])
+        linear = linear_filter(img, conf["LINEAR_MASK"], conf["LINEAR_WEIGHTS"])
 
         # Apply median filter to image
-        median = median_filter(img, 9, [[0, 0, 0], [0, 1, 0], [0, 0, 0]])
+        median = median_filter(img, conf["MEDIAN_MASK"], conf["MEDIAN_WEIGHTS"])
 
         # Calculate histogram for image
         histogram, equalized, equalized_image = calculate_histogram(img)
@@ -294,25 +296,27 @@ def apply_operations(img_file):
         echo(style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e))
         return
 
+
 def parallel_operations(files):
-    with Pool(NUM_OF_PROCESSES) as p:
+    with Pool(conf["NUM_OF_PROCESSES"]) as p:
         p.map(apply_operations, files)
+
 
 def main(argv: List[str]):
 
-    base_path = Path(argv[1])
+    base_path = Path(conf["DATA_DIR"])
     echo(style("[INFO] ", fg="green") + f"image directory: {str(base_path)}")
 
     files = list(base_path.glob("*.BMP"))
 
-    Path("datasets/output").mkdir(parents=True, exist_ok=True)
+    Path(conf["OUTPUT_DIR"]).mkdir(parents=True, exist_ok=True)
 
     time_data = {}
 
     t0 = time.time()
 
     # [!!!] Only for development
-    files = files[:5]
+    files = files[:DATA_SUBSET]
 
     parallel_operations(files)
 
@@ -326,8 +330,3 @@ def main(argv: List[str]):
         )
 
     print()
-    echo(style(f"[INFO] Total time: {t_delta}", fg="cyan"))
-
-
-if __name__ == "__main__":
-    main(sys.argv)

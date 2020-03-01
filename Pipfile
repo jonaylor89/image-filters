@@ -12,6 +12,7 @@ numpy = "*"
 matplotlib = "*"
 click = "*"
 numba = "*"
+toml = "*"
 
 [requires]
 python_version = "3.7"

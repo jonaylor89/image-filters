@@ -1,0 +1,15 @@
+
+DATA_DIR = "datasets/Cancerous_cell_smears"
+OUTPUT_DIR = "datasets/output/"
+
+NUM_OF_PROCESSES = 10
+
+COLOR_CHANNEL = "red"
+SALT_PEPPER_STRENGTH = 0.4
+GAUSS_NOISE_STRENGTH = 0.1
+
+LINEAR_MASK = 9
+LINEAR_WEIGHTS = [[0, 0, 0], [0, 1, 0], [0, 0, 0]]
+
+MEDIAN_MASK = 9
+MEDIAN_WEIGHTS = [[0, 0, 0], [0, 1, 0], [0, 0, 0]]

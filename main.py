@@ -299,17 +299,20 @@ def apply_operations(img_file):
         return img_file.stem
 
     except Exception as e:
-        echo(style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e))
-        return
+        return style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e)
 
 
 def parallel_operations(files):
+    echo(
+        style("[INFO] ", fg="green")
+        + f"initilizing process pool ({conf['NUM_OF_PROCESSES']})"
+    )
     with Pool(conf["NUM_OF_PROCESSES"]) as p:
         with tqdm(total=len(files)) as pbar:
             for _, res in tqdm(enumerate(p.imap(apply_operations, files))):
                 pbar.write(
                     style(f"[INFO:{res}] ", fg="cyan")
-                    + f"extracting data from: {style(res, fg='cyan')}"
+                    + f"performing operations on: {style(res, fg='cyan')}"
                 )
                 pbar.update()
 
@@ -330,7 +333,7 @@ def main(argv: List[str]):
     t0 = time.time()
 
     # [!!!] Only for development
-    files = files[:DATA_SUBSET]
+    # files = files[:DATA_SUBSET]
 
     parallel_operations(files)
 

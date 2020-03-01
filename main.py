@@ -3,17 +3,17 @@
 import sys
 import time
 import numpy as np
-
-from numba import njit
 from PIL import Image
 from pathlib import Path
 from click import echo, style
-
+from multiprocessing import Pool
 from matplotlib import pyplot as plt
-
+from numba import njit, jit
 from typing import List, Tuple
 
 OUTPUT_DIR = "datasets/output/"
+
+NUM_OF_PROCESSES = 10
 
 # timeit: decorator to time functions
 def timeit(f):
@@ -214,8 +214,11 @@ def apply_median_filter(img_array: np.array, img_filter: np.array) -> np.array:
 
     return output
 
+
 @timeit
-def median_filter(img_array: np.array, mask_size: int, weights: List[List[int]]) -> np.array:
+def median_filter(
+    img_array: np.array, mask_size: int, weights: List[List[int]]
+) -> np.array:
 
     filter = np.array(weights)
     median = apply_median_filter(img_array, filter)
@@ -233,6 +236,7 @@ def export_plot(img_arr: np.array, filename: str) -> None:
     _ = plt.hist(img_arr, bins=256, range=(0, 256))
     plt.title(filename)
     plt.savefig(OUTPUT_DIR + filename + ".png")
+    plt.close()
 
 
 @timeit
@@ -240,6 +244,59 @@ def get_image_data(filename: Path, log_time=None) -> np.array:
     with Image.open(filename) as img:
         return np.array(img)
 
+def apply_operations(img_file):
+    try:
+        echo(
+            style(f"[INFO:{img_file.stem}] ", fg="cyan")
+            + f"extracting data from: {style(str(img_file), fg='cyan')}"
+        )
+
+        color_img = get_image_data(img_file)
+
+        # Grey scale image
+        img = select_channel(color_img, color="red")
+
+        # Create salt and peppered noise image
+        salt_and_pepper = season_noise(img, 0.4)
+
+        # Create gaussian noise image
+        gauss = gaussian_noise(img, 0.01 ** 0.5)
+
+        # Apply linear filter to image
+        linear = linear_filter(img, 9, [[0, 0, 0], [0, 1, 0], [0, 0, 0]])
+
+        # Apply median filter to image
+        median = median_filter(img, 9, [[0, 0, 0], [0, 1, 0], [0, 0, 0]])
+
+        # Calculate histogram for image
+        histogram, equalized, equalized_image = calculate_histogram(img)
+
+        echo(
+            style(f"[INFO:{img_file.stem}] ", fg="green")
+            + f"exporting plots and images for {img_file.stem}..."
+        )
+
+        export_image(salt_and_pepper, "salt_and_pepper_" + img_file.stem)
+
+        export_image(gauss, "gaussian_" + img_file.stem)
+
+        export_image(equalized_image, "equalized_" + img_file.stem)
+
+        export_image(linear, "linear_" + img_file.stem)
+
+        export_image(median, "median_" + img_file.stem)
+
+        # export_plot(histogram, "histogram_" + img_file.stem)
+
+        # export_plot(equalized, "histogram_equalized_" + img_file.stem)
+
+    except Exception as e:
+        echo(style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e))
+        return
+
+def parallel_operations(files):
+    with Pool(NUM_OF_PROCESSES) as p:
+        p.map(apply_operations, files)
 
 def main(argv: List[str]):
 
@@ -257,56 +314,7 @@ def main(argv: List[str]):
     # [!!!] Only for development
     files = files[:5]
 
-    for f in files:
-        try:
-            echo(
-                style(f"[INFO:{f.stem}] ", fg="red")
-                + f"extracting data from: {style(str(f), fg='cyan')}"
-            )
-
-            color_img = get_image_data(f, log_time=time_data)
-            copy_color_img = np.copy(color_img)
-
-            # Grey scale image
-            img = select_channel(color_img, color="red")
-
-            # Create salt and peppered noise image
-            salt_and_pepper = season_noise(img, 0.4)
-
-            # Create gaussian noise image
-            gauss = gaussian_noise(img, 0.01 ** 0.5)
-
-            # Apply linear filter to image
-            linear = linear_filter(img, 9, [[0, 0, 0], [0, 1, 0], [0, 0, 0]])
-
-            # Apply median filter to image
-            median = median_filter(img, 9, [[0, 0, 0], [0, 1, 0], [0, 0, 0]])
-
-            # Calculate histogram for image
-            histogram, equalized, equalized_image = calculate_histogram(img)
-
-            echo(
-            style(f"[INFO:{f.stem}] ", fg="green")
-            + f"exporting plots and images for {f.stem}..."
-            )
-
-            export_image(salt_and_pepper, "salt_and_pepper_" + f.stem)
-
-            export_image(gauss, "gaussian_" + f.stem)
-
-            export_image(equalized_image, "equalized_" + f.stem)
-
-            export_image(linear, "linear_" + f.stem)
-
-            export_image(median, "median_" + f.stem)
-
-            export_plot(histogram, "histogram_" + f.stem)
-
-            export_plot(equalized, "histogram_equalized_" + f.stem)
-
-        except Exception as e:
-            print("[ERROR]", e)
-
+    parallel_operations(files)
 
     t_delta = time.time() - t0
 

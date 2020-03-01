@@ -330,3 +330,8 @@ def main(argv: List[str]):
         )
 
     print()
+    echo(style(f"[INFO] Total time: {t_delta:.2f}", fg="cyan"))
+
+
+if __name__ == "__main__":
+    main(sys.argv)

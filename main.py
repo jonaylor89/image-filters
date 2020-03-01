@@ -4,7 +4,7 @@ import sys
 import time
 import numpy as np
 
-from numba import jit
+from numba import njit
 from PIL import Image
 from pathlib import Path
 from click import echo, style
@@ -31,7 +31,7 @@ def timeit(f):
     return timed
 
 
-@jit(nopython=True)
+@njit(fastmath=True)
 def cumsum(a):
     a = iter(a)
     b = [next(a)]
@@ -41,7 +41,7 @@ def cumsum(a):
     return np.array(b)
 
 
-@jit(nopython=True)
+@njit
 def histogram(img_array):
     """
     >> h=zeros(256,1);              OR    >> h=zeros(256,1);
@@ -74,7 +74,7 @@ def histogram(img_array):
 
 
 @timeit
-@jit(nopython=True)
+@njit(fastmath=True)
 def calculate_histogram(img_array: np.array) -> np.array:
     """
     g1(l) = ∑(l, k=0) pA(k) ⇒ g1(l)−g1(l −1) = pA(l) = hA(l)/NM (l = 1,...,255)
@@ -120,7 +120,7 @@ def select_channel(img_array: np.array, color: str = "", log_time=None) -> np.ar
 
 
 @timeit
-@jit(nopython=True)
+@njit
 def season_noise(img_array, strength: int) -> np.array:
     s_vs_p = 0.5
     out = np.copy(img_array)
@@ -145,7 +145,7 @@ def season_noise(img_array, strength: int) -> np.array:
 
 
 @timeit
-@jit(nopython=True)
+@njit
 def gaussian_noise(img_array: np.array, sigma: int) -> np.array:
     mean = 0.0
 
@@ -157,7 +157,7 @@ def gaussian_noise(img_array: np.array, sigma: int) -> np.array:
     return gauss
 
 
-@jit(nopython=True)
+@njit(fastmath=True)
 def apply_filter(img_array, img_filter):
 
     rows, cols = img_array.shape
@@ -187,7 +187,7 @@ def linear_filter(
     return linear
 
 
-@jit(nopython=True)
+@njit(fastmath=True)
 def apply_median_filter(img_array: np.array, img_filter: np.array) -> np.array:
 
     rows, cols = img_array.shape
@@ -225,6 +225,7 @@ def median_filter(img_array: np.array, mask_size: int, weights: List[List[int]])
 
 def export_image(img_arr: np.array, filename: str) -> None:
     img = Image.fromarray(img_arr)
+    img = img.convert("L")
     img.save(OUTPUT_DIR + filename + ".BMP")
 
 
@@ -257,59 +258,55 @@ def main(argv: List[str]):
     files = files[:5]
 
     for f in files:
-        echo(
-            style(f"[INFO:{f.stem}] ", fg="green")
-            + f"extracting data from: {style(str(f), fg='cyan')}"
-        )
+        try:
+            echo(
+                style(f"[INFO:{f.stem}] ", fg="red")
+                + f"extracting data from: {style(str(f), fg='cyan')}"
+            )
 
-        color_img = get_image_data(f, log_time=time_data)
-        copy_color_img = np.copy(color_img)
+            color_img = get_image_data(f, log_time=time_data)
+            copy_color_img = np.copy(color_img)
 
-        # Grey scale image
-        img = select_channel(color_img, color="red")
+            # Grey scale image
+            img = select_channel(color_img, color="red")
 
-        # Create salt and peppered noise image
-        salt_and_pepper = season_noise(img, 0.4)
+            # Create salt and peppered noise image
+            salt_and_pepper = season_noise(img, 0.4)
 
-        # Create gaussian noise image
-        gauss = gaussian_noise(img, 0.01 ** 0.5)
+            # Create gaussian noise image
+            gauss = gaussian_noise(img, 0.01 ** 0.5)
 
-        # Apply linear filter to image
-        linear = linear_filter(img, 9, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+            # Apply linear filter to image
+            linear = linear_filter(img, 9, [[0, 0, 0], [0, 1, 0], [0, 0, 0]])
 
-        # Apply median filter to image
-        median = median_filter(img, 9, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+            # Apply median filter to image
+            median = median_filter(img, 9, [[0, 0, 0], [0, 1, 0], [0, 0, 0]])
 
-        # Calculate histogram for image
-        histogram, equalized, equalized_image = calculate_histogram(img)
+            # Calculate histogram for image
+            histogram, equalized, equalized_image = calculate_histogram(img)
 
-        echo(
+            echo(
             style(f"[INFO:{f.stem}] ", fg="green")
             + f"exporting plots and images for {f.stem}..."
-        )
+            )
 
-        copy_color_img[:, :, 0] = salt_and_pepper
-        export_image(copy_color_img, "salt_and_pepper_" + f.stem)
+            export_image(salt_and_pepper, "salt_and_pepper_" + f.stem)
 
-        copy_color_img[:, :, 0] = gauss
-        export_image(copy_color_img, "gaussian_" + f.stem)
+            export_image(gauss, "gaussian_" + f.stem)
 
-        copy_color_img[:, :, 0] = equalized_image
-        export_image(copy_color_img, "equalized_" + f.stem)
+            export_image(equalized_image, "equalized_" + f.stem)
 
-        # Crop image
-        size = linear.shape
-        cropped_copy_color_img = copy_color_img[: size[0], : size[1], :]
-        cropped_copy_color_img[:, :, 0] = linear
-        export_image(cropped_copy_color_img, "linear_" + f.stem)
+            export_image(linear, "linear_" + f.stem)
 
-        size = median.shape
-        cropped_copy_color_img = copy_color_img[: size[0], : size[1], :]
-        cropped_copy_color_img[:, :, 0] = median
-        export_image(cropped_copy_color_img, "median_" + f.stem)
+            export_image(median, "median_" + f.stem)
 
-        export_plot(histogram, "histogram_" + f.stem)
-        export_plot(equalized, "histogram_equalized_" + f.stem)
+            export_plot(histogram, "histogram_" + f.stem)
+
+            export_plot(equalized, "histogram_equalized_" + f.stem)
+
+        except Exception as e:
+            print("[ERROR]", e)
+
 
     t_delta = time.time() - t0
 

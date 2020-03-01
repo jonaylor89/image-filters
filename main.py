@@ -3,18 +3,20 @@
 import sys
 import time
 import toml
+import json
 import numpy as np
+from tqdm import tqdm
 from PIL import Image
 from pathlib import Path
-from click import echo, style
+from click import clear, echo, style, secho
 from multiprocessing import Pool
 from matplotlib import pyplot as plt
 from numba import njit, jit
 from typing import List, Tuple
 
 conf = toml.load("config.toml")
-
-DATA_SUBSET = 5
+DATA_SUBSET = 50
+time_data = {}
 
 # timeit: decorator to time functions
 def timeit(f):
@@ -23,9 +25,16 @@ def timeit(f):
         result = f(*args, **kwargs)
         te = time.time()
 
+        """
         echo(
-            style("[INFO] ", fg="green") + f"{f.__name__}  {((te - ts) * 1000):.2f} ms"
+            style("[DEBUG] ", fg="green") + f"{f.__name__}  {((te - ts) * 1000):.2f} ms"
         )
+        """
+
+        if f.__name__ in time_data.keys():
+            time_data[f.__name__].append((te - ts) * 1000)
+        else:
+            time_data[f.__name__] = [(te - ts) * 1000]
 
         return result
 
@@ -74,7 +83,6 @@ def histogram(img_array):
     return hist
 
 
-@timeit
 @njit(fastmath=True)
 def calculate_histogram(img_array: np.array) -> np.array:
     """
@@ -240,7 +248,6 @@ def export_plot(img_arr: np.array, filename: str) -> None:
     plt.close()
 
 
-@timeit
 def get_image_data(filename: Path, log_time=None) -> np.array:
     with Image.open(filename) as img:
         return np.array(img)
@@ -248,10 +255,12 @@ def get_image_data(filename: Path, log_time=None) -> np.array:
 
 def apply_operations(img_file):
     try:
+        """
         echo(
             style(f"[INFO:{img_file.stem}] ", fg="cyan")
             + f"extracting data from: {style(str(img_file), fg='cyan')}"
         )
+        """
 
         color_img = get_image_data(img_file)
 
@@ -273,10 +282,12 @@ def apply_operations(img_file):
         # Calculate histogram for image
         histogram, equalized, equalized_image = calculate_histogram(img)
 
+        """
         echo(
-            style(f"[INFO:{img_file.stem}] ", fg="green")
+            style(f"[DEBUG:{img_file.stem}] ", fg="green")
             + f"exporting plots and images for {img_file.stem}..."
         )
+        """
 
         export_image(salt_and_pepper, "salt_and_pepper_" + img_file.stem)
 
@@ -299,10 +310,14 @@ def apply_operations(img_file):
 
 def parallel_operations(files):
     with Pool(conf["NUM_OF_PROCESSES"]) as p:
-        p.map(apply_operations, files)
+        with tqdm(total=len(files)) as pbar:
+            for _ in tqdm(enumerate(p.imap(apply_operations, files))):
+                pbar.update()
 
 
 def main(argv: List[str]):
+
+    clear()
 
     base_path = Path(conf["DATA_DIR"])
     echo(style("[INFO] ", fg="green") + f"image directory: {str(base_path)}")
@@ -330,7 +345,7 @@ def main(argv: List[str]):
         )
 
     print()
-    echo(style(f"[INFO] Total time: {t_delta:.2f}", fg="cyan"))
+    secho(f"[INFO] Total time: {t_delta:.2f}", fg="cyan")
 
 
 if __name__ == "__main__":

@@ -3,7 +3,6 @@
 import sys
 import time
 import toml
-import json
 import numpy as np
 from tqdm import tqdm
 from PIL import Image
@@ -255,12 +254,6 @@ def get_image_data(filename: Path, log_time=None) -> np.array:
 
 def apply_operations(img_file):
     try:
-        """
-        echo(
-            style(f"[INFO:{img_file.stem}] ", fg="cyan")
-            + f"extracting data from: {style(str(img_file), fg='cyan')}"
-        )
-        """
 
         color_img = get_image_data(img_file)
 
@@ -303,6 +296,8 @@ def apply_operations(img_file):
 
         # export_plot(equalized, "histogram_equalized_" + img_file.stem)
 
+        return img_file.stem
+
     except Exception as e:
         echo(style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e))
         return
@@ -311,7 +306,11 @@ def apply_operations(img_file):
 def parallel_operations(files):
     with Pool(conf["NUM_OF_PROCESSES"]) as p:
         with tqdm(total=len(files)) as pbar:
-            for _ in tqdm(enumerate(p.imap(apply_operations, files))):
+            for _, res in tqdm(enumerate(p.imap(apply_operations, files))):
+                pbar.write(
+                    style(f"[INFO:{res}] ", fg="cyan")
+                    + f"extracting data from: {style(res, fg='cyan')}"
+                )
                 pbar.update()
 
 

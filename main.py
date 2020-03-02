@@ -4,6 +4,7 @@ import sys
 import time
 import toml
 import numpy as np
+from collections import Counter
 from tqdm import tqdm
 from PIL import Image
 from pathlib import Path
@@ -14,11 +15,10 @@ from numba import njit, jit
 from typing import List, Tuple
 
 conf = toml.load("config.toml")
-DATA_SUBSET = 50
-time_data = {}
+DATA_SUBSET = 5
 
 # timeit: decorator to time functions
-def timeit(f):
+def timeit(f, single_time_data):
     def timed(*args, **kwargs):
         ts = time.time()
         result = f(*args, **kwargs)
@@ -30,10 +30,7 @@ def timeit(f):
         )
         """
 
-        if f.__name__ in time_data.keys():
-            time_data[f.__name__].append((te - ts) * 1000)
-        else:
-            time_data[f.__name__] = [(te - ts) * 1000]
+        single_time_data[f.__name__] = (te - ts) * 1000
 
         return result
 
@@ -127,7 +124,6 @@ def select_channel(img_array: np.array, color: str = "", log_time=None) -> np.ar
         return np.array(img)
 
 
-@timeit
 @njit
 def season_noise(img_array, strength: int) -> np.array:
     s_vs_p = 0.5
@@ -152,7 +148,6 @@ def season_noise(img_array, strength: int) -> np.array:
     return out
 
 
-@timeit
 @njit
 def gaussian_noise(img_array: np.array, sigma: int) -> np.array:
     mean = 0.0
@@ -184,7 +179,6 @@ def apply_filter(img_array, img_filter):
     return output
 
 
-@timeit
 def linear_filter(
     img_array: np.array, mask_size: int, weights: List[List[int]]
 ) -> np.array:
@@ -223,7 +217,6 @@ def apply_median_filter(img_array: np.array, img_filter: np.array) -> np.array:
     return output
 
 
-@timeit
 def median_filter(
     img_array: np.array, mask_size: int, weights: List[List[int]]
 ) -> np.array:
@@ -253,6 +246,7 @@ def get_image_data(filename: Path, log_time=None) -> np.array:
 
 
 def apply_operations(img_file):
+    single_time_data = {}
     try:
 
         color_img = get_image_data(img_file)
@@ -261,16 +255,24 @@ def apply_operations(img_file):
         img = select_channel(color_img, color=conf["COLOR_CHANNEL"])
 
         # Create salt and peppered noise image
-        salt_and_pepper = season_noise(img, conf["SALT_PEPPER_STRENGTH"])
+        salt_and_pepper = timeit(season_noise, single_time_data)(
+            img, conf["SALT_PEPPER_STRENGTH"]
+        )
 
         # Create gaussian noise image
-        gauss = gaussian_noise(img, conf["GAUSS_NOISE_STRENGTH"])
+        gauss = timeit(gaussian_noise, single_time_data)(
+            img, conf["GAUSS_NOISE_STRENGTH"]
+        )
 
         # Apply linear filter to image
-        linear = linear_filter(img, conf["LINEAR_MASK"], conf["LINEAR_WEIGHTS"])
+        linear = timeit(linear_filter, single_time_data)(
+            img, conf["LINEAR_MASK"], conf["LINEAR_WEIGHTS"]
+        )
 
         # Apply median filter to image
-        median = median_filter(img, conf["MEDIAN_MASK"], conf["MEDIAN_WEIGHTS"])
+        median = timeit(median_filter, single_time_data)(
+            img, conf["MEDIAN_MASK"], conf["MEDIAN_WEIGHTS"]
+        )
 
         # Calculate histogram for image
         histogram, equalized, equalized_image = calculate_histogram(img)
@@ -296,25 +298,32 @@ def apply_operations(img_file):
 
         # export_plot(equalized, "histogram_equalized_" + img_file.stem)
 
-        return img_file.stem
+        return (
+            style(f"[INFO:{img_file.stem}] ", fg="green")
+            + f"performing operations on: {style(img_file.stem, fg='cyan')}",
+            single_time_data,
+        )
 
     except Exception as e:
-        return style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e)
+        return style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e), {}
 
 
 def parallel_operations(files):
+    time_data = Counter()
+
     echo(
         style("[INFO] ", fg="green")
-        + f"initilizing process pool ({conf['NUM_OF_PROCESSES']})"
+        + f"initilizing process pool (number of processes: {conf['NUM_OF_PROCESSES']})"
     )
     with Pool(conf["NUM_OF_PROCESSES"]) as p:
         with tqdm(total=len(files)) as pbar:
-            for _, res in tqdm(enumerate(p.imap(apply_operations, files))):
-                pbar.write(
-                    style(f"[INFO:{res}] ", fg="cyan")
-                    + f"performing operations on: {style(res, fg='cyan')}"
-                )
+            for res in tqdm(p.imap(apply_operations, files)):
+                pbar.write(res[0])
                 pbar.update()
+
+                time_data += res[1]
+
+    return time_data
 
 
 def main(argv: List[str]):
@@ -328,26 +337,21 @@ def main(argv: List[str]):
 
     Path(conf["OUTPUT_DIR"]).mkdir(parents=True, exist_ok=True)
 
-    time_data = {}
-
     t0 = time.time()
 
     # [!!!] Only for development
-    # files = files[:DATA_SUBSET]
+    files = files[:DATA_SUBSET]
 
-    parallel_operations(files)
+    operation_time_data = parallel_operations(files)
 
     t_delta = time.time() - t0
 
-    for k, v in time_data.items():
-        echo(
-            style("[INFO] ", fg="green")
-            + "average time data: "
-            + style(f"{k} : {(v / len(files)):.2f} ms", fg="red")
-        )
+    echo(style("[INFO] ", fg="green") + "Average operation time data:")
+    for k, v in operation_time_data.items():
+        echo(style(f"   {k} : {(v / len(files)):.2f} ms"))
 
     print()
-    secho(f"[INFO] Total time: {t_delta:.2f} (s)", fg="cyan")
+    secho(f"[INFO] Total time: {t_delta:.2f} s", fg="magenta")
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 DATA_DIR = "datasets/Cancerous_cell_smears"
 OUTPUT_DIR = "datasets/output/"
 
-NUM_OF_PROCESSES = 5
+NUM_OF_PROCESSES = 10
 
 COLOR_CHANNEL = "red"
 SALT_PEPPER_STRENGTH = 0.4

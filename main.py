@@ -347,7 +347,7 @@ def main(argv: List[str]):
         )
 
     print()
-    secho(f"[INFO] Total time: {t_delta:.2f}", fg="cyan")
+    secho(f"[INFO] Total time: {t_delta:.2f} (s)", fg="cyan")
 
 
 if __name__ == "__main__":

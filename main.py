@@ -15,7 +15,6 @@ from numba import njit, jit
 from typing import List, Tuple
 
 conf = toml.load("config.toml")
-DATA_SUBSET = 5
 
 # timeit: decorator to time functions
 def timeit(f, single_time_data):
@@ -125,7 +124,7 @@ def select_channel(img_array: np.array, color: str = "", log_time=None) -> np.ar
 
 
 @njit
-def season_noise(img_array, strength: int) -> np.array:
+def salt_pepper_noise(img_array, strength: int) -> np.array:
     s_vs_p = 0.5
     out = np.copy(img_array)
 
@@ -255,7 +254,7 @@ def apply_operations(img_file):
         img = select_channel(color_img, color=conf["COLOR_CHANNEL"])
 
         # Create salt and peppered noise image
-        salt_and_pepper = timeit(season_noise, single_time_data)(
+        salt_and_pepper = timeit(salt_pepper_noise, single_time_data)(
             img, conf["SALT_PEPPER_STRENGTH"]
         )
 
@@ -275,7 +274,9 @@ def apply_operations(img_file):
         )
 
         # Calculate histogram for image
-        histogram, equalized, equalized_image = calculate_histogram(img)
+        histogram, equalized, equalized_image = timeit(
+            calculate_histogram, single_time_data
+        )(img)
 
         """
         echo(
@@ -299,13 +300,12 @@ def apply_operations(img_file):
         # export_plot(equalized, "histogram_equalized_" + img_file.stem)
 
         return (
-            style(f"[INFO:{img_file.stem}] ", fg="green")
-            + f"performing operations on: {style(img_file.stem, fg='cyan')}",
+            style(f"[INFO:{img_file.stem}] ", fg="green") + "finished...",
             single_time_data,
         )
 
     except Exception as e:
-        return style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e), {}
+        return (style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e), {})
 
 
 def parallel_operations(files):
@@ -315,6 +315,7 @@ def parallel_operations(files):
         style("[INFO] ", fg="green")
         + f"initilizing process pool (number of processes: {conf['NUM_OF_PROCESSES']})"
     )
+    echo(style("[INFO] ", fg="green") + "compiling...")
     with Pool(conf["NUM_OF_PROCESSES"]) as p:
         with tqdm(total=len(files)) as pbar:
             for res in tqdm(p.imap(apply_operations, files)):
@@ -331,16 +332,20 @@ def main(argv: List[str]):
     clear()
 
     base_path = Path(conf["DATA_DIR"])
-    echo(style("[INFO] ", fg="green") + f"image directory: {str(base_path)}")
 
     files = list(base_path.glob("*.BMP"))
+    echo(
+        style("[INFO] ", fg="green")
+        + f"image directory: {str(base_path)}; {len(files)} images found"
+    )
 
     Path(conf["OUTPUT_DIR"]).mkdir(parents=True, exist_ok=True)
 
     t0 = time.time()
 
     # [!!!] Only for development
-    files = files[:DATA_SUBSET]
+    # DATA_SUBSET = 50
+    # files = files[:DATA_SUBSET]
 
     operation_time_data = parallel_operations(files)
 

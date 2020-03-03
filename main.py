@@ -46,7 +46,7 @@ def cumsum(a):
     return np.array(b)
 
 
-@njit
+@njit(fastmath=True)
 def histogram(img_array):
     """
     >> h=zeros(256,1);              OR    >> h=zeros(256,1);
@@ -62,7 +62,7 @@ def histogram(img_array):
     >> bar(0:255,h);
     """
 
-    # Create blank histpgram
+    # Create blank histogram
     hist = np.zeros(256)
 
     # Get size of pixel array

@@ -47,7 +47,7 @@ def cumsum(a: np.array) -> np.array:
 
 
 @njit(fastmath=True)
-def histogram(img_array: no.array) -> np.array:
+def histogram(img_array: np.array) -> np.array:
     """
     >> h=zeros(256,1);              OR    >> h=zeros(256,1);
     >> for l = 0 : 255                    >> for l = 0 : 255
@@ -355,8 +355,8 @@ def main(argv: List[str]):
     t0 = time.time()
 
     # [!!!] Only for development
-    # DATA_SUBSET = 5
-    # files = files[:DATA_SUBSET]
+    DATA_SUBSET = 5
+    files = files[:DATA_SUBSET]
 
     operation_time_data = parallel_operations(files)
 

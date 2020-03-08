@@ -1,6 +1,8 @@
 
+datasets/
 *.zip
 Cancerous_cell_smears
-datasets/
 
 .mypy_cache/
+
+.DS_Store

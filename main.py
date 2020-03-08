@@ -299,10 +299,7 @@ def apply_operations(img_file):
 
         # export_plot(equalized, "histogram_equalized_" + img_file.stem)
 
-        return (
-            style(f"[INFO:{img_file.stem}] ", fg="green") + "finished...",
-            single_time_data,
-        )
+        return (img_file.stem, single_time_data)
 
     except Exception as e:
         return (style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e), {})
@@ -319,7 +316,7 @@ def parallel_operations(files):
     with Pool(conf["NUM_OF_PROCESSES"]) as p:
         with tqdm(total=len(files)) as pbar:
             for res in tqdm(p.imap(apply_operations, files)):
-                pbar.write(res[0])
+                pbar.write(style(f"[INFO:{res[0]}] ", fg="green") + "finished...")
                 pbar.update()
 
                 time_data += res[1]

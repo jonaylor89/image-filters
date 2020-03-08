@@ -344,19 +344,20 @@ def main(argv: List[str]):
     t0 = time.time()
 
     # [!!!] Only for development
-    # DATA_SUBSET = 50
-    # files = files[:DATA_SUBSET]
+    DATA_SUBSET = 5
+    files = files[:DATA_SUBSET]
 
     operation_time_data = parallel_operations(files)
 
     t_delta = time.time() - t0
 
-    echo(style("[INFO] ", fg="green") + "Average operation time data:")
+    echo("\n\n")
+    secho("Average operation time:", fg="green")
     for k, v in operation_time_data.items():
-        echo(style(f"   {k} : {(v / len(files)):.2f} ms"))
+        echo(style("   ==> ", fg="green") + f"{k:20} : {(v / len(files)):8.2f} ms")
 
     print()
-    secho(f"[INFO] Total time: {t_delta:.2f} s", fg="magenta")
+    secho(f"Total time: {t_delta:.2f} s", fg="green")
 
 
 if __name__ == "__main__":

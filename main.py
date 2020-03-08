@@ -347,7 +347,7 @@ def parallel_operations(files: List[Path]):
     "config_location",
     "-c",
     "--config",
-    envvar="PATHS",
+    envvar="CMSC630_CONFIG",
     type=click.Path(exists=True),
     default="config.toml",
 )

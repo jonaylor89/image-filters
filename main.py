@@ -355,8 +355,8 @@ def main(argv: List[str]):
     t0 = time.time()
 
     # [!!!] Only for development
-    DATA_SUBSET = 5
-    files = files[:DATA_SUBSET]
+    # DATA_SUBSET = 5
+    # files = files[:DATA_SUBSET]
 
     operation_time_data = parallel_operations(files)
 

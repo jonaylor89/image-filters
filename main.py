@@ -105,6 +105,14 @@ def calculate_histogram(img_array: np.array) -> np.array:
     return hist, histogram(equalized), img_new
 
 
+@njit(fastmath=True)
+def mean_square_error(original_img: np.array, quantized_img: np.array) -> int:
+
+    mse = (np.square(original_img - quantized_img)).mean()
+
+    return mse
+
+
 def select_channel(img_array: np.array, color: str = "", log_time=None) -> np.array:
 
     if color == "red":
@@ -278,6 +286,8 @@ def apply_operations(img_file):
             calculate_histogram, single_time_data
         )(img)
 
+        msqe = mean_square_error(img, equalized_image)
+
         """
         echo(
             style(f"[DEBUG:{img_file.stem}] ", fg="green")
@@ -299,10 +309,14 @@ def apply_operations(img_file):
 
         # export_plot(equalized, "histogram_equalized_" + img_file.stem)
 
-        return (img_file.stem, single_time_data)
+        return (
+            style(f"{f'[INFO:{img_file.stem}]':15}", fg="green"),
+            single_time_data,
+            msqe,
+        )
 
     except Exception as e:
-        return (style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e), {})
+        return (style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e), {}, 0)
 
 
 def parallel_operations(files):
@@ -316,7 +330,7 @@ def parallel_operations(files):
     with Pool(conf["NUM_OF_PROCESSES"]) as p:
         with tqdm(total=len(files)) as pbar:
             for res in tqdm(p.imap(apply_operations, files)):
-                pbar.write(style(f"[INFO:{res[0]}] ", fg="green") + "finished...")
+                pbar.write(res[0] + f"finished...   (msqe:{res[2]:8.2f})")
                 pbar.update()
 
                 time_data += res[1]

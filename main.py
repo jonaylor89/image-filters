@@ -37,7 +37,7 @@ def timeit(f, single_time_data):
 
 
 @njit(fastmath=True)
-def cumsum(a):
+def cumsum(a: np.array) -> np.array:
     a = iter(a)
     b = [next(a)]
     for i in a:
@@ -47,7 +47,7 @@ def cumsum(a):
 
 
 @njit(fastmath=True)
-def histogram(img_array):
+def histogram(img_array: no.array) -> np.array:
     """
     >> h=zeros(256,1);              OR    >> h=zeros(256,1);
     >> for l = 0 : 255                    >> for l = 0 : 255
@@ -132,7 +132,7 @@ def select_channel(img_array: np.array, color: str = "", log_time=None) -> np.ar
 
 
 @njit
-def salt_pepper_noise(img_array, strength: int) -> np.array:
+def salt_pepper_noise(img_array: np.array, strength: int) -> np.array:
     s_vs_p = 0.5
     out = np.copy(img_array)
 
@@ -168,7 +168,7 @@ def gaussian_noise(img_array: np.array, sigma: int) -> np.array:
 
 
 @njit(fastmath=True)
-def apply_filter(img_array, img_filter):
+def apply_filter(img_array: np.array, img_filter: np.array) -> np.array:
 
     rows, cols = img_array.shape
     height, width = img_filter.shape
@@ -252,7 +252,7 @@ def get_image_data(filename: Path, log_time=None) -> np.array:
         return np.array(img)
 
 
-def apply_operations(img_file):
+def apply_operations(img_file: Path):
     single_time_data = {}
     try:
 
@@ -319,7 +319,7 @@ def apply_operations(img_file):
         return (style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e), {}, 0)
 
 
-def parallel_operations(files):
+def parallel_operations(files: List[Path]):
     time_data = Counter()
 
     echo(
@@ -355,8 +355,8 @@ def main(argv: List[str]):
     t0 = time.time()
 
     # [!!!] Only for development
-    DATA_SUBSET = 5
-    files = files[:DATA_SUBSET]
+    # DATA_SUBSET = 5
+    # files = files[:DATA_SUBSET]
 
     operation_time_data = parallel_operations(files)
 

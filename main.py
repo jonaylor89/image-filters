@@ -3,6 +3,7 @@
 import sys
 import time
 import toml
+import click
 import numpy as np
 from collections import Counter
 from tqdm import tqdm
@@ -13,8 +14,6 @@ from multiprocessing import Pool
 from matplotlib import pyplot as plt
 from numba import njit, jit
 from typing import List, Tuple
-
-conf = toml.load("config.toml")
 
 # timeit: decorator to time functions
 def timeit(f, single_time_data):
@@ -113,7 +112,7 @@ def mean_square_error(original_img: np.array, quantized_img: np.array) -> int:
     return mse
 
 
-def select_channel(img_array: np.array, color: str = "", log_time=None) -> np.array:
+def select_channel(img_array: np.array, color: str = "") -> np.array:
 
     if color == "red":
         return img_array[:, :, 0]
@@ -247,7 +246,7 @@ def export_plot(img_arr: np.array, filename: str) -> None:
     plt.close()
 
 
-def get_image_data(filename: Path, log_time=None) -> np.array:
+def get_image_data(filename: Path) -> np.array:
     with Image.open(filename) as img:
         return np.array(img)
 
@@ -255,6 +254,7 @@ def get_image_data(filename: Path, log_time=None) -> np.array:
 def apply_operations(img_file: Path):
     single_time_data = {}
     try:
+        ts = time.time()
 
         color_img = get_image_data(img_file)
 
@@ -287,6 +287,10 @@ def apply_operations(img_file: Path):
         )(img)
 
         msqe = mean_square_error(img, equalized_image)
+
+        te = time.time()
+
+        single_time_data["total"] = (te - ts) * 1000
 
         """
         echo(
@@ -338,7 +342,18 @@ def parallel_operations(files: List[Path]):
     return time_data
 
 
-def main(argv: List[str]):
+@click.command()
+@click.option(
+    "config_location",
+    "-c",
+    "--config",
+    envvar="PATHS",
+    type=click.Path(exists=True),
+    default="config.toml",
+)
+def main(config_location):
+    global conf
+    conf = toml.load(config_location)
 
     clear()
 
@@ -372,4 +387,4 @@ def main(argv: List[str]):
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()

@@ -107,6 +107,9 @@ def calculate_histogram(img_array: np.array) -> np.array:
 
 @njit(fastmath=True)
 def mean_square_error(original_img: np.array, quantized_img: np.array) -> int:
+    """
+    Calculate the mean square error between two image arrays
+    """
 
     mse = (np.square(original_img - quantized_img)).mean()
 
@@ -114,6 +117,9 @@ def mean_square_error(original_img: np.array, quantized_img: np.array) -> int:
 
 
 def select_channel(img_array: np.array, color: str = "") -> np.array:
+    """
+    Select which color channel to select from an RGB image array
+    """
 
     if color == "red":
         return img_array[:, :, 0]
@@ -133,6 +139,10 @@ def select_channel(img_array: np.array, color: str = "") -> np.array:
 
 @njit
 def salt_pepper_noise(img_array: np.array, strength: int) -> np.array:
+    """
+    Add salt and pepper noise to a copy of an image array
+    """
+
     s_vs_p = 0.5
     out = np.copy(img_array)
 
@@ -157,6 +167,10 @@ def salt_pepper_noise(img_array: np.array, strength: int) -> np.array:
 
 @njit
 def gaussian_noise(img_array: np.array, sigma: int) -> np.array:
+    """
+    Add gaussian noise to a copy of an image array
+    """
+
     mean = 0.0
 
     noise = np.random.normal(mean, sigma, img_array.size)
@@ -169,6 +183,9 @@ def gaussian_noise(img_array: np.array, sigma: int) -> np.array:
 
 @njit(fastmath=True)
 def apply_filter(img_array: np.array, img_filter: np.array) -> np.array:
+    """
+    Applies a linear filter to a copy of an image based on filter weights
+    """
 
     rows, cols = img_array.shape
     height, width = img_filter.shape
@@ -190,6 +207,10 @@ def linear_filter(
     img_array: np.array, mask_size: int, weights: List[List[int]]
 ) -> np.array:
 
+    """
+    Converts arguments to numpy arrays and applies a linear filter to a copy of an image based on filter weights
+    """
+
     filter = np.array(weights)
     linear = apply_filter(img_array, filter)
 
@@ -198,6 +219,9 @@ def linear_filter(
 
 @njit(fastmath=True)
 def apply_median_filter(img_array: np.array, img_filter: np.array) -> np.array:
+    """
+    Applies a linear filter to a copy of an image based on filter weights
+    """
 
     rows, cols = img_array.shape
     height, width = img_filter.shape
@@ -227,6 +251,9 @@ def apply_median_filter(img_array: np.array, img_filter: np.array) -> np.array:
 def median_filter(
     img_array: np.array, mask_size: int, weights: List[List[int]]
 ) -> np.array:
+    """
+    Converts arguments to numpy arrays and applies a median filter to a copy of an image based on filter weights
+    """
 
     filter = np.array(weights)
     median = apply_median_filter(img_array, filter)
@@ -235,12 +262,19 @@ def median_filter(
 
 
 def export_image(img_arr: np.array, filename: str) -> None:
+    """
+    Exports a numpy array as a grey scale bmp image
+    """
     img = Image.fromarray(img_arr)
     img = img.convert("L")
     img.save(conf["OUTPUT_DIR"] + filename + ".BMP")
 
 
 def export_plot(img_arr: np.array, filename: str) -> None:
+    """
+    exports a historgam as a matplotlib plot
+    """
+
     _ = plt.hist(img_arr, bins=256, range=(0, 256))
     plt.title(filename)
     plt.savefig(conf["OUTPUT_DIR"] + filename + ".png")
@@ -248,6 +282,10 @@ def export_plot(img_arr: np.array, filename: str) -> None:
 
 
 def export_plots(plot_q: Queue()):
+    """
+    Exports a batch of histograms from a queue
+    """
+
     plot_q.put(None)
     # 500 images * 2 plots per image
     ts = time.time()
@@ -265,11 +303,19 @@ def export_plots(plot_q: Queue()):
 
 
 def get_image_data(filename: Path) -> np.array:
+    """
+    Converts a bmp image to a numpy array
+    """
+
     with Image.open(filename) as img:
         return np.array(img)
 
 
 def apply_operations(img_file: Path, plot_q: Queue):
+    """
+    Runs an image through a set of operations
+    """
+
     single_time_data = {}
     try:
         ts = time.time()
@@ -352,6 +398,10 @@ def apply_operations(img_file: Path, plot_q: Queue):
 
 
 def parallel_operations(files: List[Path], plot_q: Queue):
+    """
+    Batch operates on a set of images in a multiprocess pool
+    """
+
     time_data = Counter()
 
     image_operations = partial(apply_operations, plot_q=plot_q)

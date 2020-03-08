@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 
-import sys
 import time
 import toml
 import click
 import numpy as np
+from sys import platform
 from collections import Counter
+from functools import partial
 from tqdm import tqdm
 from PIL import Image
 from pathlib import Path
 from click import clear, echo, style, secho
-from multiprocessing import Pool
+from multiprocessing import Pool, Queue, Manager
 from matplotlib import pyplot as plt
 from numba import njit, jit
 from typing import List, Tuple
@@ -246,12 +247,29 @@ def export_plot(img_arr: np.array, filename: str) -> None:
     plt.close()
 
 
+def export_plots(plot_q: Queue()):
+    plot_q.put(None)
+    # 500 images * 2 plots per image
+    ts = time.time()
+
+    with tqdm(total=500 * 2) as pbar:
+        for item in tqdm(iter(plot_q.get, None)):
+            img_arr = item[0]
+            filename = item[1]
+            export_plot(img_arr, filename)
+            pbar.update()
+
+    te = time.time()
+
+    echo(style("[INFO] ", fg="green") + f"exporting took {(te - ts) * 1000} s")
+
+
 def get_image_data(filename: Path) -> np.array:
     with Image.open(filename) as img:
         return np.array(img)
 
 
-def apply_operations(img_file: Path):
+def apply_operations(img_file: Path, plot_q: Queue):
     single_time_data = {}
     try:
         ts = time.time()
@@ -288,10 +306,6 @@ def apply_operations(img_file: Path):
 
         msqe = mean_square_error(img, equalized_image)
 
-        te = time.time()
-
-        single_time_data["total"] = (te - ts) * 1000
-
         """
         echo(
             style(f"[DEBUG:{img_file.stem}] ", fg="green")
@@ -299,19 +313,33 @@ def apply_operations(img_file: Path):
         )
         """
 
-        export_image(salt_and_pepper, "salt_and_pepper_" + img_file.stem)
+        timeit(export_image, single_time_data)(
+            salt_and_pepper, "salt_and_pepper_" + img_file.stem
+        )
 
-        export_image(gauss, "gaussian_" + img_file.stem)
+        timeit(export_image, single_time_data)(gauss, "gaussian_" + img_file.stem)
 
-        export_image(equalized_image, "equalized_" + img_file.stem)
+        timeit(export_image, single_time_data)(
+            equalized_image, "equalized_" + img_file.stem
+        )
 
-        export_image(linear, "linear_" + img_file.stem)
+        timeit(export_image, single_time_data)(linear, "linear_" + img_file.stem)
 
-        export_image(median, "median_" + img_file.stem)
+        timeit(export_image, single_time_data)(median, "median_" + img_file.stem)
 
-        # export_plot(histogram, "histogram_" + img_file.stem)
+        if platform == "darwin" or platform == "win32":
+            plot_q.put((histogram, "histogram_" + img_file.stem))
+            plot_q.put((equalized, "histogram_equalized_" + img_file.stem))
+        else:
+            timeit(export_plot, single_time_data)(
+                histogram, "histogram_" + img_file.stem
+            )
+            timeit(export_plot, single_time_data)(
+                equalized, "histogram_equalized_" + img_file.stem
+            )
 
-        # export_plot(equalized, "histogram_equalized_" + img_file.stem)
+        te = time.time()
+        single_time_data["total"] = (te - ts) * 1000
 
         return (
             style(f"{f'[INFO:{img_file.stem}]':15}", fg="green"),
@@ -323,8 +351,10 @@ def apply_operations(img_file: Path):
         return (style(f"[ERROR:{img_file.stem}] ", fg="red") + str(e), {}, 0)
 
 
-def parallel_operations(files: List[Path]):
+def parallel_operations(files: List[Path], plot_q: Queue):
     time_data = Counter()
+
+    image_operations = partial(apply_operations, plot_q=plot_q)
 
     echo(
         style("[INFO] ", fg="green")
@@ -333,8 +363,8 @@ def parallel_operations(files: List[Path]):
     echo(style("[INFO] ", fg="green") + "compiling...")
     with Pool(conf["NUM_OF_PROCESSES"]) as p:
         with tqdm(total=len(files)) as pbar:
-            for res in tqdm(p.imap(apply_operations, files)):
-                pbar.write(res[0] + f"finished...   (msqe:{res[2]:8.2f})")
+            for res in tqdm(p.imap(image_operations, files)):
+                pbar.write(res[0] + f" finished...   (msqe:{res[2]:8.2f})")
                 pbar.update()
 
                 time_data += res[1]
@@ -350,6 +380,7 @@ def parallel_operations(files: List[Path]):
     envvar="CMSC630_CONFIG",
     type=click.Path(exists=True),
     default="config.toml",
+    show_default=True,
 )
 def main(config_location):
     global conf
@@ -373,7 +404,22 @@ def main(config_location):
     # DATA_SUBSET = 5
     # files = files[:DATA_SUBSET]
 
-    operation_time_data = parallel_operations(files)
+    with Manager() as manager:
+        plot_q = manager.Queue()
+        operation_time_data = parallel_operations(files, plot_q)
+        if platform == "darwin" or platform == "win32":
+            secho(
+                "\n\n"
+                + "[WARNING] MacOS and Windows require any GUI operation to be run in the main thread\n"
+                + "          matplotlib uses Tkinter, a GUI library, to generate plots\n"
+                + "          therefore plotting must be saved until the end and done synchronously\n\n"
+                + "          Use linux or run inside a docker container for better performance\n\n",
+                fg="red",
+            )
+
+            echo(style("[INFO] ", fg="green") + "exporting plots...")
+
+            export_plots(plot_q)
 
     t_delta = time.time() - t0
 

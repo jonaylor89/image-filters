@@ -3,7 +3,9 @@
 import time
 import toml
 import click
+import matplotlib
 import numpy as np
+from typing import List, Tuple
 from sys import platform
 from collections import Counter
 from functools import partial
@@ -12,9 +14,8 @@ from PIL import Image
 from pathlib import Path
 from click import clear, echo, style, secho
 from multiprocessing import Pool, Queue, Manager
-from matplotlib import pyplot as plt
 from numba import njit, jit
-from typing import List, Tuple
+from matplotlib import pyplot as plt
 
 # timeit: decorator to time functions
 def timeit(f, single_time_data):
@@ -313,7 +314,7 @@ def export_plots(plot_q: Queue()):
 
     te = time.time()
 
-    echo(style("[INFO] ", fg="green") + f"exporting took {(te - ts) * 1000} s")
+    echo(style("[INFO] ", fg="green") + f"exporting took {((te - ts) * 1000):.2f} ms")
 
 
 def get_image_data(filename: Path) -> np.array:

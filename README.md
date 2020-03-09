@@ -39,13 +39,13 @@ The programming language of choice for this project was python. The high level r
 ```toml
 # Pipefile
 [packages]
-pillow = "\*"     # reading and writing images
-numpy = "\*"      # fast array operations
-matplotlib = "\*" # plotting
-click = "\*"      # command line interface utility
-numba = "\*"      # just-in-time compiler for operations
-toml = "\*"       # reading configuration file
-tqdm = "\*"       # progress bar
+pillow = "*"     # reading and writing images
+numpy = "*"      # fast array operations
+matplotlib = "*" # plotting
+click = "*"      # command line interface utility
+numba = "*"      # just-in-time compiler for operations
+toml = "*"       # reading configuration file
+tqdm = "*"       # progress bar
 ```
 *These can be found in the Pipfile at the root of the source code*
 

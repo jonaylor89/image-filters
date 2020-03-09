@@ -79,11 +79,15 @@ def histogram(img_array: np.array) -> np.array:
 
 
 @njit(fastmath=True)
-def calculate_histogram(img_array: np.array) -> np.array:
+def calculate_histogram(img_array: np.array) -> (np.array, np.array, np.array):
     """
     g1(l) = ∑(l, k=0) pA(k) ⇒ g1(l)−g1(l −1) = pA(l) = hA(l)/NM (l = 1,...,255)
 
     geA(l) = round(255g1(l))
+
+    calculate_histogram generates the histogram for an image,
+    the equalized histogram,
+    and a new quantized image based on the equalized histogram.
     """
 
     flat = img_array.flatten()
@@ -108,7 +112,8 @@ def calculate_histogram(img_array: np.array) -> np.array:
 @njit(fastmath=True)
 def mean_square_error(original_img: np.array, quantized_img: np.array) -> int:
     """
-    Calculate the mean square error between two image arrays
+    mean_square_error takes two images represented as numpy arrays
+    and finds the mean squared error of all of their pixel values.
     """
 
     mse = (np.square(original_img - quantized_img)).mean()
@@ -116,9 +121,9 @@ def mean_square_error(original_img: np.array, quantized_img: np.array) -> int:
     return mse
 
 
-def select_channel(img_array: np.array, color: str = "") -> np.array:
+def select_channel(img_array: np.array, color: str = "red") -> np.array:
     """
-    Select which color channel to select from an RGB image array
+    select_channel isolates a color channel from a RGB image represented as a numpy array.
     """
 
     if color == "red":
@@ -130,17 +135,14 @@ def select_channel(img_array: np.array, color: str = "") -> np.array:
     elif color == "blue":
         return img_array[:, :, 2]
 
-    else:
-        # Default to using the default greyscaling Pillow does
-        img = Image.fromarray(img_array, "L")
-
-        return np.array(img)
-
 
 @njit
 def salt_pepper_noise(img_array: np.array, strength: int) -> np.array:
     """
-    Add salt and pepper noise to a copy of an image array
+    salt_pepper_noise randomly jumps through an image
+    and converts a certain percentage of pixels white or black.
+    The percentage is given in the strength parameter
+    and the percentage of white to black pixels is 50%.
     """
 
     s_vs_p = 0.5
@@ -168,7 +170,9 @@ def salt_pepper_noise(img_array: np.array, strength: int) -> np.array:
 @njit
 def gaussian_noise(img_array: np.array, sigma: int) -> np.array:
     """
-    Add gaussian noise to a copy of an image array
+    gaussian_noise creates a numpy array with the same dimensions as the image
+    and generates gaussian normal noise based off the sigma parameter.
+    That noise is added to a copy of the original image to achieve gaussian noise.
     """
 
     mean = 0.0
@@ -208,7 +212,13 @@ def linear_filter(
 ) -> np.array:
 
     """
-    Converts arguments to numpy arrays and applies a linear filter to a copy of an image based on filter weights
+    linear_filter uses a kernel or matrix of weights,
+    given as a two dimensional List,
+    and applies that kernel to a copy of an image.
+    Applying the filter loops through every pixel in the image
+    and multiples the values of the neighboring pixels by the weights in the kernel.
+    The larger the kernel, the larger the neighborhood of pixels
+    that affect the pixel being operated on at any given moment.
     """
 
     filter = np.array(weights)
@@ -252,7 +262,11 @@ def median_filter(
     img_array: np.array, mask_size: int, weights: List[List[int]]
 ) -> np.array:
     """
-    Converts arguments to numpy arrays and applies a median filter to a copy of an image based on filter weights
+    median_filter also uses a kernel or matrix of weights,
+    given as a two dimensional List, and applies that kernel to a copy of an image.
+    The median filter has the added effect of taking the median pixel value of a given neighborhood,
+    of which the size of that neighborhood is specified by the size of the kernel,
+    and assigning that value to the pixel in question at that moment.
     """
 
     filter = np.array(weights)

@@ -13,7 +13,7 @@
 # (i.e. -v $HOME/Repos/CMSC630_Project_1/datasets:/app/datasets)
 #
 #####################################################################
-DATA_DIR = "datasets/Cancerous_cell_smears"
+DATA_DIR = "datasets/input/"
 OUTPUT_DIR = "datasets/output/"
 
 # The number of process workers in the process pool for work on batches
@@ -21,13 +21,25 @@ NUM_OF_PROCESSES = 10
 
 #################################################
 #
+# GRAYSCALE_METHOD:
+#
+# The method to use for converting RGB images to grayscale
+# Possible values are "channel" and "luminance"
+# - "channel": Uses a single color channel (specified by COLOR_CHANNEL)
+# - "luminance": Uses traditional luminance formula (0.299*R + 0.587*G + 0.114*B)
+#
+#################################################
+GRAYSCALE_METHOD = "luminance"
+
+#################################################
+#
 # COLOR_CHANNEL:
 #
-# The color channel to select from the image
+# The color channel to select from the image when using "channel" method
 # Possible values are "red", "blue", and "green"
 #
 #################################################
-COLOR_CHANNEL = "red"
+COLOR_CHANNEL = "blue"
 
 ######################################################################
 #
@@ -65,5 +77,9 @@ LINEAR_WEIGHTS = [
   [0, 0, 0]
 ]
 
-MEDIAN_MASK = 1
-MEDIAN_WEIGHTS = [[1]]
+MEDIAN_MASK = 9
+MEDIAN_WEIGHTS = [
+  [0, 1, 0],
+  [1, 1, 1],
+  [0, 1, 0]
+]

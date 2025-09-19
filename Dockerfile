@@ -1,17 +1,23 @@
 
-# pipenv base container
-FROM kennethreitz/pipenv
+# Use Python base image
+FROM python:3.13-slim
 
 LABEL MAINTAINER="John Naylor <jonaylor89@gmail.com>"
+
+# Install uv
+RUN pip install uv
 
 # cd to /app
 WORKDIR /app
 
-# copy source code to /app
-COPY . /app/
+# Copy dependency files first for better caching
+COPY pyproject.toml uv.lock ./
 
-# install dependencies
-RUN pipenv install --deploy --system
+# Install dependencies
+RUN uv sync --frozen --no-dev
+
+# Copy source code to /app
+COPY . /app/
 
 RUN mkdir -p /app/datasets/Cancerous_cell_smears
 

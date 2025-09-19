@@ -137,6 +137,30 @@ def select_channel(img_array: np.array, color: str = "red") -> np.array:
         return img_array[:, :, 2]
 
 
+def rgb_to_grayscale(img: np.ndarray) -> np.ndarray:
+    """
+    Convert an RGB image (H, W, 3) into grayscale (H, W).
+
+    Args:
+        img (np.ndarray): Input image with shape (H, W, 3).
+
+    Returns:
+        np.ndarray: Grayscale image with shape (H, W).
+    """
+    # Ensure it's float for precision before multiplying
+    if img.dtype != np.float32 and img.dtype != np.float64:
+        img_float = img.astype(np.float32)
+    else:
+        img_float = img
+
+    # Standard luminance weights
+    r, g, b = img_float[..., 0], img_float[..., 1], img_float[..., 2]
+    gray = 0.299 * r + 0.587 * g + 0.114 * b
+
+    # Convert back to uint8 for consistency with other functions
+    return gray.astype(np.uint8)
+
+
 @njit
 def salt_pepper_noise(img_array: np.array, strength: int) -> np.array:
     """
@@ -247,7 +271,7 @@ def apply_median_filter(img_array: np.array, img_filter: np.array) -> np.array:
             for hh in range(height):
                 for ww in range(width):
 
-                    pixel_values[p] = img_array[hh][ww]
+                    pixel_values[p] = img_array[rr + hh, cc + ww]
                     p += 1
 
             # Sort the array of pixels inplace
@@ -282,7 +306,8 @@ def export_image(img_arr: np.array, filename: str) -> None:
     """
     img = Image.fromarray(img_arr)
     img = img.convert("L")
-    img.save(conf["OUTPUT_DIR"] + filename + ".BMP")
+    # img.save(conf["OUTPUT_DIR"] + filename + ".BMP")
+    img.save(conf["OUTPUT_DIR"] + filename + ".jpg")
 
 
 def export_plot(img_arr: np.array, filename: str) -> None:
@@ -338,7 +363,12 @@ def apply_operations(img_file: Path, plot_q: Queue):
         color_img = get_image_data(img_file)
 
         # Grey scale image
-        img = select_channel(color_img, color=conf["COLOR_CHANNEL"])
+        if conf["GRAYSCALE_METHOD"] == "channel":
+            img = select_channel(color_img, color=conf["COLOR_CHANNEL"])
+        elif conf["GRAYSCALE_METHOD"] == "luminance":
+            img = rgb_to_grayscale(color_img)
+        else:
+            raise ValueError(f"Unknown grayscale method: {conf['GRAYSCALE_METHOD']}")
 
         # Create salt and peppered noise image
         salt_and_pepper = timeit(salt_pepper_noise, single_time_data)(
@@ -437,6 +467,9 @@ def parallel_operations(files: List[Path], plot_q: Queue):
     return time_data
 
 
+# Load configuration at module level
+conf = toml.load("config.toml")
+
 @click.command()
 @click.option(
     "config_location",
@@ -449,13 +482,15 @@ def parallel_operations(files: List[Path], plot_q: Queue):
 )
 def main(config_location):
     global conf
-    conf = toml.load(config_location)
+    if config_location != "config.toml":
+        conf = toml.load(config_location)
 
     clear()
 
     base_path = Path(conf["DATA_DIR"])
 
-    files = list(base_path.glob("*.BMP"))
+    # files = list(base_path.glob("*.BMP"))
+    files = list(base_path.glob("*.jpg"))
     echo(
         style("[INFO] ", fg="green")
         + f"image directory: {str(base_path)}; {len(files)} images found"

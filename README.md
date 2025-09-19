@@ -19,9 +19,8 @@ Options:
 ```sh
 git clone https://github.com/jonaylor89/CMSC_630_Project_1.git
 cd CMSC_630_Project_1
-pip3 install --user pipenv
-pipenv install
-pipenv run python main.py
+uv sync
+uv run python main.py
 ```
 Or
 ```
@@ -37,17 +36,19 @@ The programming language of choice for this project was python. The high level r
 
 **Full Third-Party Dependency List**
 ```toml
-# Pipefile
-[packages]
-pillow = "*"     # reading and writing images
-numpy = "*"      # fast array operations
-matplotlib = "*" # plotting
-click = "*"      # command line interface utility
-numba = "*"      # just-in-time compiler for operations
-toml = "*"       # reading configuration file
-tqdm = "*"       # progress bar
+# pyproject.toml
+[project]
+dependencies = [
+    "pillow",     # reading and writing images
+    "numpy",      # fast array operations
+    "matplotlib", # plotting
+    "click",      # command line interface utility
+    "numba",      # just-in-time compiler for operations
+    "toml",       # reading configuration file
+    "tqdm",       # progress bar
+]
 ```
-*These can be found in the Pipfile at the root of the source code*
+*These can be found in the pyproject.toml at the root of the source code*
 
 ---
 
